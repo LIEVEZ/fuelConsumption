@@ -11,6 +11,9 @@ class BackupCodec {
       'exportedAt': data.exportedAt.toIso8601String(),
       'vehicles': data.vehicles.map((vehicle) => vehicle.toJson()).toList(),
       'records': data.records.map((record) => record.toJson()).toList(),
+      'maintenanceRecords': data.maintenanceRecords
+          .map((record) => record.toJson())
+          .toList(),
     });
   }
 
@@ -31,6 +34,11 @@ class BackupCodec {
           .cast<Map<String, Object?>>()
           .map(EnergyRecord.fromJson)
           .toList(),
+      maintenanceRecords:
+          (json['maintenanceRecords'] as List<Object?>? ?? const [])
+              .cast<Map<String, Object?>>()
+              .map(MaintenanceRecord.fromJson)
+              .toList(),
     );
   }
 }

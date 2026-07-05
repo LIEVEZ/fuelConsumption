@@ -1,0 +1,150 @@
+import 'package:flutter/material.dart';
+import 'package:fuel_consumption/src/data/app_repository.dart';
+import 'package:fuel_consumption/src/domain/models.dart';
+import 'package:uuid/uuid.dart';
+
+class VehicleDialog extends StatefulWidget {
+  const VehicleDialog({required this.repository, super.key});
+
+  final AppRepository repository;
+
+  @override
+  State<VehicleDialog> createState() => _VehicleDialogState();
+}
+
+class _VehicleDialogState extends State<VehicleDialog> {
+  final _nameController = TextEditingController();
+  final _modelController = TextEditingController();
+  final _odometerController = TextEditingController(text: '0');
+  VehicleType _type = VehicleType.fuel;
+  String? _error;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _modelController.dispose();
+    _odometerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.directions_car,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('添加车辆', style: Theme.of(context).textTheme.titleLarge),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: '车辆名称',
+                        errorText: _error,
+                      ),
+                      onChanged: (_) => setState(() => _error = null),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _modelController,
+                      decoration: const InputDecoration(labelText: '车型/备注'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _odometerController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(labelText: '初始里程 km'),
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final type in VehicleType.values)
+                            ChoiceChip(
+                              label: Text(
+                                type == VehicleType.fuel ? '油车' : type.label,
+                              ),
+                              selected: _type == type,
+                              onSelected: (_) => setState(() => _type = type),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('取消'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _save,
+                      child: const Text('保存车辆'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = '请填写车辆名称');
+      return;
+    }
+    await widget.repository.saveVehicle(
+      Vehicle(
+        id: const Uuid().v4(),
+        name: name,
+        type: _type,
+        initialOdometerKm: double.tryParse(_odometerController.text) ?? 0,
+        model: _modelController.text.trim(),
+        isDefault: true,
+      ),
+    );
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+}

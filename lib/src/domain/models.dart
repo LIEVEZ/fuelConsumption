@@ -46,6 +46,33 @@ enum ChargeMode {
   }
 }
 
+enum MaintenanceCategory {
+  regular,
+  oil,
+  tire,
+  repair,
+  wash,
+  insurance,
+  other;
+
+  String get label => switch (this) {
+    MaintenanceCategory.regular => '常规保养',
+    MaintenanceCategory.oil => '换机油',
+    MaintenanceCategory.tire => '换轮胎',
+    MaintenanceCategory.repair => '维修',
+    MaintenanceCategory.wash => '洗车',
+    MaintenanceCategory.insurance => '保险',
+    MaintenanceCategory.other => '其他',
+  };
+
+  static MaintenanceCategory fromName(String value) {
+    return MaintenanceCategory.values.firstWhere(
+      (category) => category.name == value,
+      orElse: () => MaintenanceCategory.other,
+    );
+  }
+}
+
 class Vehicle {
   const Vehicle({
     required this.id,
@@ -129,6 +156,64 @@ class Vehicle {
     isDefault,
     archived,
   );
+}
+
+class MaintenanceRecord {
+  const MaintenanceRecord({
+    required this.id,
+    required this.vehicleId,
+    required this.date,
+    required this.category,
+    required this.cost,
+    this.shop = '',
+    this.note = '',
+  });
+
+  final String id;
+  final String vehicleId;
+  final DateTime date;
+  final MaintenanceCategory category;
+  final double cost;
+  final String shop;
+  final String note;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'vehicleId': vehicleId,
+    'date': date.toIso8601String(),
+    'category': category.name,
+    'cost': cost,
+    'shop': shop,
+    'note': note,
+  };
+
+  factory MaintenanceRecord.fromJson(Map<String, Object?> json) {
+    return MaintenanceRecord(
+      id: json['id'] as String,
+      vehicleId: json['vehicleId'] as String,
+      date: DateTime.parse(json['date'] as String),
+      category: MaintenanceCategory.fromName(json['category'] as String),
+      cost: (json['cost'] as num).toDouble(),
+      shop: json['shop'] as String? ?? '',
+      note: json['note'] as String? ?? '',
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MaintenanceRecord &&
+        other.id == id &&
+        other.vehicleId == vehicleId &&
+        other.date == date &&
+        other.category == category &&
+        other.cost == cost &&
+        other.shop == shop &&
+        other.note == note;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, vehicleId, date, category, cost, shop, note);
 }
 
 class EnergyRecord {
@@ -374,10 +459,12 @@ class BackupData {
     required this.exportedAt,
     required this.vehicles,
     required this.records,
+    this.maintenanceRecords = const [],
   });
 
   final int schemaVersion;
   final DateTime exportedAt;
   final List<Vehicle> vehicles;
   final List<EnergyRecord> records;
+  final List<MaintenanceRecord> maintenanceRecords;
 }

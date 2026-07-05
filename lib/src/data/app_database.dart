@@ -42,14 +42,41 @@ class EnergyRecordRows extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [VehicleRows, EnergyRecordRows])
+class MaintenanceRecordRows extends Table {
+  TextColumn get id => text()();
+  TextColumn get vehicleId => text().references(VehicleRows, #id)();
+  DateTimeColumn get date => dateTime()();
+  TextColumn get category => text()();
+  RealColumn get cost => real()();
+  TextColumn get shop => text().withDefault(const Constant(''))();
+  TextColumn get note => text().withDefault(const Constant(''))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [VehicleRows, EnergyRecordRows, MaintenanceRecordRows])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   AppDatabase.inMemory() : super(_openInMemoryConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) => migrator.createAll(),
+    onUpgrade: (migrator, from, to) async {
+      await customStatement('DROP TABLE IF EXISTS energy_record_rows');
+      await customStatement('DROP TABLE IF EXISTS maintenance_record_rows');
+      await customStatement('DROP TABLE IF EXISTS vehicle_rows');
+      await migrator.createAll();
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 
   Future<void> upsertVehicle(domain.Vehicle vehicle) {
     return transaction(() async {
@@ -68,6 +95,26 @@ class AppDatabase extends _$AppDatabase {
     return into(
       energyRecordRows,
     ).insertOnConflictUpdate(_recordCompanion(record));
+  }
+
+  Future<void> upsertMaintenanceRecord(domain.MaintenanceRecord record) {
+    return into(
+      maintenanceRecordRows,
+    ).insertOnConflictUpdate(_maintenanceRecordCompanion(record));
+  }
+
+  Future<void> deleteVehicle(String vehicleId) {
+    return transaction(() async {
+      await (delete(
+        energyRecordRows,
+      )..where((row) => row.vehicleId.equals(vehicleId))).go();
+      await (delete(
+        maintenanceRecordRows,
+      )..where((row) => row.vehicleId.equals(vehicleId))).go();
+      await (delete(
+        vehicleRows,
+      )..where((row) => row.id.equals(vehicleId))).go();
+    });
   }
 
   Stream<List<domain.Vehicle>> watchVehicles() {
@@ -98,11 +145,36 @@ class AppDatabase extends _$AppDatabase {
       ..sort((a, b) => a.date.compareTo(b.date));
   }
 
+  Stream<List<domain.MaintenanceRecord>> watchMaintenanceRecords(
+    String vehicleId,
+  ) {
+    final query = select(maintenanceRecordRows)
+      ..where((row) => row.vehicleId.equals(vehicleId))
+      ..orderBy([(row) => OrderingTerm.desc(row.date)]);
+    return query.watch().map(
+      (rows) => rows.map(_maintenanceRecordFromRow).toList(),
+    );
+  }
+
+  Future<List<domain.MaintenanceRecord>> getMaintenanceRecords([
+    String? vehicleId,
+  ]) async {
+    final query = select(maintenanceRecordRows);
+    if (vehicleId != null) {
+      query.where((row) => row.vehicleId.equals(vehicleId));
+    }
+    final rows = await query.get();
+    return rows.map(_maintenanceRecordFromRow).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+  }
+
   Future<void> replaceAll({
     required List<domain.Vehicle> vehicles,
     required List<domain.EnergyRecord> records,
+    required List<domain.MaintenanceRecord> maintenanceRecords,
   }) async {
     await transaction(() async {
+      await delete(maintenanceRecordRows).go();
       await delete(energyRecordRows).go();
       await delete(vehicleRows).go();
       for (final vehicle in vehicles) {
@@ -110,6 +182,9 @@ class AppDatabase extends _$AppDatabase {
       }
       for (final record in records) {
         await upsertRecord(record);
+      }
+      for (final record in maintenanceRecords) {
+        await upsertMaintenanceRecord(record);
       }
     });
   }
@@ -146,6 +221,20 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  MaintenanceRecordRowsCompanion _maintenanceRecordCompanion(
+    domain.MaintenanceRecord record,
+  ) {
+    return MaintenanceRecordRowsCompanion.insert(
+      id: record.id,
+      vehicleId: record.vehicleId,
+      date: record.date,
+      category: record.category.name,
+      cost: record.cost,
+      shop: Value(record.shop),
+      note: Value(record.note),
+    );
+  }
+
   domain.Vehicle _vehicleFromRow(VehicleRow row) {
     return domain.Vehicle(
       id: row.id,
@@ -177,6 +266,18 @@ class AppDatabase extends _$AppDatabase {
       'note': row.note,
     };
     return domain.EnergyRecord.fromJson(json);
+  }
+
+  domain.MaintenanceRecord _maintenanceRecordFromRow(MaintenanceRecordRow row) {
+    return domain.MaintenanceRecord(
+      id: row.id,
+      vehicleId: row.vehicleId,
+      date: row.date,
+      category: domain.MaintenanceCategory.fromName(row.category),
+      cost: row.cost,
+      shop: row.shop,
+      note: row.note,
+    );
   }
 }
 

@@ -17,6 +17,10 @@ class FuelRepository implements AppRepository {
       _database.watchRecords(vehicleId);
 
   @override
+  Stream<List<MaintenanceRecord>> watchMaintenanceRecords(String vehicleId) =>
+      _database.watchMaintenanceRecords(vehicleId);
+
+  @override
   Future<List<Vehicle>> getVehicles() => _database.getVehicles();
 
   @override
@@ -24,11 +28,23 @@ class FuelRepository implements AppRepository {
       _database.getRecords(vehicleId);
 
   @override
+  Future<List<MaintenanceRecord>> getMaintenanceRecords([String? vehicleId]) =>
+      _database.getMaintenanceRecords(vehicleId);
+
+  @override
   Future<void> saveVehicle(Vehicle vehicle) => _database.upsertVehicle(vehicle);
+
+  @override
+  Future<void> deleteVehicle(String vehicleId) =>
+      _database.deleteVehicle(vehicleId);
 
   @override
   Future<void> saveRecord(EnergyRecord record) =>
       _database.upsertRecord(record);
+
+  @override
+  Future<void> saveMaintenanceRecord(MaintenanceRecord record) =>
+      _database.upsertMaintenanceRecord(record);
 
   @override
   Future<BackupData> exportBackup() async {
@@ -37,13 +53,18 @@ class FuelRepository implements AppRepository {
       exportedAt: DateTime.now(),
       vehicles: await getVehicles(),
       records: await getRecords(),
+      maintenanceRecords: await getMaintenanceRecords(),
     );
   }
 
   @override
   Future<void> importBackup(BackupData data) {
     _validateBackup(data);
-    return _database.replaceAll(vehicles: data.vehicles, records: data.records);
+    return _database.replaceAll(
+      vehicles: data.vehicles,
+      records: data.records,
+      maintenanceRecords: data.maintenanceRecords,
+    );
   }
 
   void _validateBackup(BackupData data) {
@@ -51,6 +72,14 @@ class FuelRepository implements AppRepository {
     for (final record in data.records) {
       if (!vehicleIds.contains(record.vehicleId)) {
         throw FormatException('记录引用了不存在的车辆: ${record.vehicleId}');
+      }
+    }
+    for (final record in data.maintenanceRecords) {
+      if (!vehicleIds.contains(record.vehicleId)) {
+        throw FormatException('保养记录引用了不存在的车辆: ${record.vehicleId}');
+      }
+      if (record.cost < 0) {
+        throw FormatException('保养记录 ${record.id} 费用不能为负数');
       }
     }
 
