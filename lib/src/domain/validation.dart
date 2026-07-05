@@ -15,19 +15,21 @@ class RecordValidator {
     List<EnergyRecord> previousRecords,
   ) {
     final amountInvalid = switch (record.energyType) {
-      EnergyType.fuel => (record.fuelLiters ?? record.amount) < 0,
-      EnergyType.charge => (record.kwh ?? record.amount) < 0,
+      EnergyType.fuel => (record.fuelLiters ?? record.amount) <= 0,
+      EnergyType.charge => (record.kwh ?? record.amount) <= 0,
       EnergyType.hybrid =>
-        (record.fuelLiters ?? 0) < 0 || (record.kwh ?? 0) < 0,
+        (record.fuelLiters ?? 0) < 0 ||
+            (record.kwh ?? 0) < 0 ||
+            ((record.fuelLiters ?? 0) == 0 && (record.kwh ?? 0) == 0),
     };
     if (amountInvalid) {
-      return const ValidationResult.invalid('能源数量不能为负数');
+      return const ValidationResult.invalid('能源数量必须大于 0');
     }
-    if (record.totalCost < 0 ||
+    if (record.totalCost <= 0 ||
         record.unitPrice < 0 ||
         (record.fuelUnitPrice ?? 0) < 0 ||
         (record.electricityUnitPrice ?? 0) < 0) {
-      return const ValidationResult.invalid('金额不能为负数');
+      return const ValidationResult.invalid('金额必须大于 0');
     }
 
     final sameVehicle =
@@ -48,6 +50,15 @@ class RecordValidator {
       return const ValidationResult.invalid('里程必须小于下一条记录');
     }
 
+    return const ValidationResult.valid();
+  }
+}
+
+class MaintenanceRecordValidator {
+  ValidationResult validate(MaintenanceRecord record) {
+    if (record.cost <= 0) {
+      return const ValidationResult.invalid('保养费用必须大于 0');
+    }
     return const ValidationResult.valid();
   }
 }

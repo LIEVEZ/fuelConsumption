@@ -23,5 +23,7 @@ abstract class AppRepository {
 
   Future<BackupData> exportBackup();
 
+  Future<void> validateBackup(BackupData data);
+
   Future<void> importBackup(BackupData data);
 }

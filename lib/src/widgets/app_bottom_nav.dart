@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuel_consumption/src/theme/app_colors.dart';
 
-enum DashboardTab { consumption, records, refuel, maintenance, mine }
+enum DashboardTab { consumption, expense, refuel, mine }
 
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
@@ -11,7 +11,7 @@ class AppBottomNav extends StatelessWidget {
     super.key,
   });
 
-  final DashboardTab selectedTab;
+  final DashboardTab? selectedTab;
   final ValueChanged<DashboardTab> onSelected;
   final VoidCallback onCreateTap;
 
@@ -40,8 +40,8 @@ class AppBottomNav extends StatelessWidget {
                 icon: Icons.account_balance_wallet_outlined,
                 selectedIcon: Icons.account_balance_wallet,
                 label: '费用',
-                selected: selectedTab == DashboardTab.records,
-                onTap: () => onSelected(DashboardTab.records),
+                selected: selectedTab == DashboardTab.expense,
+                onTap: () => onSelected(DashboardTab.expense),
               ),
               _CenterAction(onTap: onCreateTap),
               _NavItem(

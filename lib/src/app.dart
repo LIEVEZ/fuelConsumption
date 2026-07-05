@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fuel_consumption/src/data/app_repository.dart';
 import 'package:fuel_consumption/src/screens/dashboard_screen.dart';
 import 'package:fuel_consumption/src/theme/app_colors.dart';
 
 class FuelConsumptionApp extends StatelessWidget {
-  const FuelConsumptionApp({required this.repository, super.key});
-
-  final AppRepository repository;
+  const FuelConsumptionApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +49,7 @@ class FuelConsumptionApp extends StatelessWidget {
             ),
           ),
         ),
-        home: DashboardScreen(repository: repository),
+        home: const DashboardScreen(),
       ),
     );
   }

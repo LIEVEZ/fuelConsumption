@@ -17,6 +17,7 @@ class _VehicleDialogState extends State<VehicleDialog> {
   final _modelController = TextEditingController();
   final _odometerController = TextEditingController(text: '0');
   VehicleType _type = VehicleType.fuel;
+  bool _saving = false;
   String? _error;
 
   @override
@@ -107,15 +108,24 @@ class _VehicleDialogState extends State<VehicleDialog> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: _saving
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       child: const Text('取消'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
-                      onPressed: _save,
-                      child: const Text('保存车辆'),
+                      onPressed: _saving ? null : _save,
+                      child: _saving
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.3,
+                              ),
+                            )
+                          : const Text('保存车辆'),
                     ),
                   ),
                 ],
@@ -133,18 +143,31 @@ class _VehicleDialogState extends State<VehicleDialog> {
       setState(() => _error = '请填写车辆名称');
       return;
     }
-    await widget.repository.saveVehicle(
-      Vehicle(
-        id: const Uuid().v4(),
-        name: name,
-        type: _type,
-        initialOdometerKm: double.tryParse(_odometerController.text) ?? 0,
-        model: _modelController.text.trim(),
-        isDefault: true,
-      ),
-    );
-    if (mounted) {
-      Navigator.of(context).pop();
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.repository.saveVehicle(
+        Vehicle(
+          id: const Uuid().v4(),
+          name: name,
+          type: _type,
+          initialOdometerKm: double.tryParse(_odometerController.text) ?? 0,
+          model: _modelController.text.trim(),
+          isDefault: true,
+        ),
+      );
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 }

@@ -1,8 +1,9 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:fuel_consumption/src/domain/consumption_statistics.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 import 'package:fuel_consumption/src/theme/app_colors.dart';
 import 'package:fuel_consumption/src/utils/energy_ui.dart';
+import 'package:fuel_consumption/src/widgets/consumption_charts.dart';
 import 'package:fuel_consumption/src/widgets/section_header.dart';
 
 class ConsumptionScreen extends StatelessWidget {
@@ -44,11 +45,11 @@ class ConsumptionScreen extends StatelessWidget {
         const SizedBox(height: 14),
         const _FuelPromoBanner(),
         const SizedBox(height: 14),
-        _ConsumptionTrendCard(records: chronologicalRecords),
+        ConsumptionTrendCard(records: chronologicalRecords),
         const SizedBox(height: 14),
-        _MonthlyFuelCostCard(records: chronologicalRecords),
+        MonthlyFuelCostCard(records: chronologicalRecords),
         const SizedBox(height: 14),
-        _AnnualConsumptionCard(records: chronologicalRecords),
+        AnnualConsumptionCard(records: chronologicalRecords),
       ],
     );
   }
@@ -67,7 +68,10 @@ class _VehicleStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final companion = _companionText(records, maintenanceRecords);
+    final companion = ConsumptionStatistics.companionText(
+      records: records,
+      maintenanceRecords: maintenanceRecords,
+    );
     return Container(
       decoration: BoxDecoration(
         color: AppColors.sky,
@@ -152,22 +156,6 @@ class _VehicleStatusCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _companionText(
-    List<EnergyRecord> records,
-    List<MaintenanceRecord> maintenanceRecords,
-  ) {
-    final dates = <DateTime>[
-      for (final record in records) record.date,
-      for (final record in maintenanceRecords) record.date,
-    ]..sort();
-    if (dates.isEmpty) return '爱车档案已建立，开始记录第一笔费用';
-    final days = DateTime.now().difference(dates.first).inDays.clamp(0, 99999);
-    final years = days ~/ 365;
-    final months = (days % 365) ~/ 30;
-    final restDays = (days % 365) % 30;
-    return '爱车已相伴 $years 年 $months 月 $restDays 天';
   }
 }
 
@@ -298,12 +286,11 @@ class _HomeExpenseSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maintenanceCost = maintenanceRecords.fold<double>(
-      0,
-      (sum, record) => sum + record.cost,
+    final overview = ConsumptionStatistics.expenseOverview(
+      stats: stats,
+      records: records,
+      maintenanceRecords: maintenanceRecords,
     );
-    final totalExpense = stats.totalCost + maintenanceCost;
-    final discount = _totalDiscount(records);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -317,7 +304,7 @@ class _HomeExpenseSummaryCard extends StatelessWidget {
                 Expanded(
                   child: _ExpenseMetric(
                     label: '总支出',
-                    value: totalExpense.toStringAsFixed(2),
+                    value: overview.totalExpense.toStringAsFixed(2),
                     unit: '元',
                     color: AppColors.text,
                   ),
@@ -325,7 +312,7 @@ class _HomeExpenseSummaryCard extends StatelessWidget {
                 Expanded(
                   child: _ExpenseMetric(
                     label: '油费总计',
-                    value: stats.totalCost.toStringAsFixed(2),
+                    value: overview.energyCost.toStringAsFixed(2),
                     unit: '元',
                     color: AppColors.fuel,
                   ),
@@ -338,7 +325,7 @@ class _HomeExpenseSummaryCard extends StatelessWidget {
                 Expanded(
                   child: _ExpenseMetric(
                     label: '保养费用',
-                    value: maintenanceCost.toStringAsFixed(2),
+                    value: overview.maintenanceCost.toStringAsFixed(2),
                     unit: '元',
                     color: AppColors.maintenance,
                   ),
@@ -346,7 +333,7 @@ class _HomeExpenseSummaryCard extends StatelessWidget {
                 Expanded(
                   child: _ExpenseMetric(
                     label: '总计优惠',
-                    value: discount.toStringAsFixed(2),
+                    value: overview.totalDiscount.toStringAsFixed(2),
                     unit: '元',
                     color: AppColors.skyDark,
                   ),
@@ -419,8 +406,8 @@ class _StatisticsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final latestDistance = _latestDailyDistance(records);
-    final totalDiscount = _totalDiscount(records);
+    final latestDistance = ConsumptionStatistics.averageDailyDistance(records);
+    final totalDiscount = ConsumptionStatistics.totalDiscount(records);
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
@@ -494,15 +481,6 @@ class _StatisticsCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  double _latestDailyDistance(List<EnergyRecord> records) {
-    if (records.length < 2) return 0;
-    final sorted = [...records]..sort((a, b) => a.date.compareTo(b.date));
-    final first = sorted.first;
-    final last = sorted.last;
-    final days = last.date.difference(first.date).inDays.abs().clamp(1, 99999);
-    return (last.odometerKm - first.odometerKm).abs() / days;
   }
 }
 
@@ -614,338 +592,4 @@ class _FuelPromoBanner extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ConsumptionTrendCard extends StatelessWidget {
-  const _ConsumptionTrendCard({required this.records});
-
-  final List<EnergyRecord> records;
-
-  @override
-  Widget build(BuildContext context) {
-    final spots = <FlSpot>[];
-    for (var index = 0; index < records.length; index++) {
-      final value = _consumptionValue(index);
-      spots.add(FlSpot(index.toDouble(), value));
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Expanded(child: SectionHeader(title: '油耗变化趋势')),
-                Text(
-                  '全部',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textMuted,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(Icons.tune, size: 20),
-              ],
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 300,
-              child: spots.length < 2
-                  ? const Center(child: Text('补能两次后显示趋势'))
-                  : LineChart(
-                      LineChartData(
-                        minY: 0,
-                        gridData: FlGridData(
-                          drawVerticalLine: false,
-                          getDrawingHorizontalLine: (value) => const FlLine(
-                            color: AppColors.border,
-                            dashArray: [8, 8],
-                          ),
-                        ),
-                        borderData: FlBorderData(
-                          show: true,
-                          border: const Border(
-                            left: BorderSide(color: AppColors.textSubtle),
-                            bottom: BorderSide(color: AppColors.textSubtle),
-                          ),
-                        ),
-                        titlesData: const FlTitlesData(
-                          topTitles: AxisTitles(),
-                          rightTitles: AxisTitles(),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 42,
-                            ),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                        ),
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: spots,
-                            isCurved: true,
-                            barWidth: 3,
-                            color: AppColors.sky,
-                            dotData: const FlDotData(show: true),
-                            belowBarData: BarAreaData(show: false),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  double _consumptionValue(int index) {
-    final record = records[index];
-    if (index == 0) {
-      return (record.fuelLiters ?? record.kwh ?? record.amount).clamp(1, 8);
-    }
-    final previous = records[index - 1];
-    final distance = record.odometerKm - previous.odometerKm;
-    if (distance <= 0) return 0;
-    return ((record.fuelLiters ?? record.kwh ?? record.amount) / distance * 100)
-        .clamp(0, 10)
-        .toDouble();
-  }
-}
-
-class _MonthlyFuelCostCard extends StatelessWidget {
-  const _MonthlyFuelCostCard({required this.records});
-
-  final List<EnergyRecord> records;
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = _monthlyCosts(records);
-    return _BarChartCard(
-      title: '油费月度统计',
-      emptyText: '记录补能费用后显示月度统计',
-      groups: entries
-          .map(
-            (entry) => _ChartBar(
-              label: '${entry.month}月',
-              value: entry.cost,
-              color: AppColors.sky,
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  List<_MonthCost> _monthlyCosts(List<EnergyRecord> records) {
-    final buckets = <DateTime, double>{};
-    for (final record in records) {
-      final key = DateTime(record.date.year, record.date.month);
-      buckets[key] = (buckets[key] ?? 0) + record.totalCost;
-    }
-    final entries = buckets.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-    return entries
-        .skip(entries.length > 6 ? entries.length - 6 : 0)
-        .map((entry) => _MonthCost(entry.key.month, entry.value))
-        .toList();
-  }
-}
-
-class _AnnualConsumptionCard extends StatelessWidget {
-  const _AnnualConsumptionCard({required this.records});
-
-  final List<EnergyRecord> records;
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = _annualConsumption(records);
-    return _BarChartCard(
-      title: '油耗年度对比统计',
-      emptyText: '补能两次后显示年度对比',
-      groups: entries
-          .map(
-            (entry) => _ChartBar(
-              label: entry.year.toString(),
-              value: entry.value,
-              color: AppColors.skyDark,
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  List<_YearConsumption> _annualConsumption(List<EnergyRecord> records) {
-    final buckets = <int, List<double>>{};
-    for (var index = 1; index < records.length; index++) {
-      final current = records[index];
-      final previous = records[index - 1];
-      final distance = current.odometerKm - previous.odometerKm;
-      if (distance <= 0) continue;
-      final amount = current.fuelLiters ?? current.kwh ?? current.amount;
-      final value = amount / distance * 100;
-      buckets.putIfAbsent(current.date.year, () => []).add(value);
-    }
-    final entries = buckets.entries.toList()..sort((a, b) => a.key - b.key);
-    return entries
-        .map(
-          (entry) => _YearConsumption(
-            entry.key,
-            entry.value.reduce((a, b) => a + b) / entry.value.length,
-          ),
-        )
-        .toList();
-  }
-}
-
-class _BarChartCard extends StatelessWidget {
-  const _BarChartCard({
-    required this.title,
-    required this.emptyText,
-    required this.groups,
-  });
-
-  final String title;
-  final String emptyText;
-  final List<_ChartBar> groups;
-
-  @override
-  Widget build(BuildContext context) {
-    final maxValue = groups.fold<double>(
-      0,
-      (max, group) => group.value > max ? group.value : max,
-    );
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeader(title: title),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 220,
-              child: groups.isEmpty
-                  ? Center(child: Text(emptyText))
-                  : BarChart(
-                      BarChartData(
-                        maxY: maxValue <= 0 ? 1 : maxValue * 1.18,
-                        gridData: FlGridData(
-                          drawVerticalLine: false,
-                          getDrawingHorizontalLine: (value) => const FlLine(
-                            color: AppColors.border,
-                            dashArray: [6, 6],
-                          ),
-                        ),
-                        borderData: FlBorderData(show: false),
-                        titlesData: FlTitlesData(
-                          topTitles: const AxisTitles(),
-                          rightTitles: const AxisTitles(),
-                          leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 40,
-                            ),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 28,
-                              getTitlesWidget: (value, meta) {
-                                final index = value.toInt();
-                                if (index < 0 || index >= groups.length) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Text(
-                                    groups[index].label,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.labelSmall,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        barGroups: [
-                          for (var index = 0; index < groups.length; index++)
-                            BarChartGroupData(
-                              x: index,
-                              barRods: [
-                                BarChartRodData(
-                                  toY: groups[index].value,
-                                  width: 18,
-                                  color: groups[index].color,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ChartBar {
-  const _ChartBar({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final String label;
-  final double value;
-  final Color color;
-}
-
-class _MonthCost {
-  const _MonthCost(this.month, this.cost);
-
-  final int month;
-  final double cost;
-}
-
-class _YearConsumption {
-  const _YearConsumption(this.year, this.value);
-
-  final int year;
-  final double value;
-}
-
-double _totalDiscount(List<EnergyRecord> records) {
-  return records.fold<double>(0, (sum, record) {
-    return sum + _discountFromRecord(record);
-  });
-}
-
-double _discountFromRecord(EnergyRecord record) {
-  final explicitDiscount = _numberAfterLabel(record.note, '优惠');
-  if (explicitDiscount != null) {
-    return explicitDiscount;
-  }
-
-  final machineAmount = _numberAfterLabel(record.note, '机显金额');
-  final paidAmount = _numberAfterLabel(record.note, '实付金额');
-  if (machineAmount != null && paidAmount != null) {
-    return (machineAmount - paidAmount).clamp(0, double.infinity).toDouble();
-  }
-
-  return 0;
-}
-
-double? _numberAfterLabel(String text, String label) {
-  final pattern = RegExp('$label\\s*([0-9]+(?:\\.[0-9]+)?)');
-  final match = pattern.firstMatch(text);
-  if (match == null) return null;
-  return double.tryParse(match.group(1)!);
 }

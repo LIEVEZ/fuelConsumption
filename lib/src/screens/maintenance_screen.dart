@@ -27,6 +27,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   final _noteController = TextEditingController();
   DateTime _date = DateTime.now();
   MaintenanceCategory _category = MaintenanceCategory.regular;
+  bool _saving = false;
   String? _error;
 
   @override
@@ -83,17 +84,22 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         SizedBox(
           height: 56,
           child: FilledButton(
-            onPressed: _save,
+            onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.sky,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(32),
               ),
             ),
-            child: const Text(
-              '保存',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
+            child: _saving
+                ? const SizedBox.square(
+                    dimension: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.4),
+                  )
+                : const Text(
+                    '保存',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
           ),
         ),
       ],
@@ -156,13 +162,25 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       shop: _shopController.text.trim(),
       note: _noteController.text.trim(),
     );
-    await widget.onSave(record);
-    if (!mounted) return;
-    setState(() => _error = null);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('已保存保养记录')));
-    widget.onSaved();
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave(record);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已保存保养记录')));
+      widget.onSaved();
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
   }
 }
 

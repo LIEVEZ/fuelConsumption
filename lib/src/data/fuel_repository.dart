@@ -32,19 +32,40 @@ class FuelRepository implements AppRepository {
       _database.getMaintenanceRecords(vehicleId);
 
   @override
-  Future<void> saveVehicle(Vehicle vehicle) => _database.upsertVehicle(vehicle);
+  Future<void> saveVehicle(Vehicle vehicle) async {
+    if (vehicle.name.trim().isEmpty) {
+      throw const FormatException('车辆名称不能为空');
+    }
+    if (vehicle.initialOdometerKm < 0) {
+      throw const FormatException('初始里程不能为负数');
+    }
+    await _database.upsertVehicle(vehicle);
+  }
 
   @override
   Future<void> deleteVehicle(String vehicleId) =>
       _database.deleteVehicle(vehicleId);
 
   @override
-  Future<void> saveRecord(EnergyRecord record) =>
-      _database.upsertRecord(record);
+  Future<void> saveRecord(EnergyRecord record) async {
+    final previousRecords = (await getRecords(
+      record.vehicleId,
+    )).where((item) => item.id != record.id).toList();
+    final result = RecordValidator().validate(record, previousRecords);
+    if (!result.isValid) {
+      throw FormatException(result.message);
+    }
+    return _database.upsertRecord(record);
+  }
 
   @override
-  Future<void> saveMaintenanceRecord(MaintenanceRecord record) =>
-      _database.upsertMaintenanceRecord(record);
+  Future<void> saveMaintenanceRecord(MaintenanceRecord record) async {
+    final result = MaintenanceRecordValidator().validate(record);
+    if (!result.isValid) {
+      throw FormatException(result.message);
+    }
+    await _database.upsertMaintenanceRecord(record);
+  }
 
   @override
   Future<BackupData> exportBackup() async {
@@ -58,9 +79,14 @@ class FuelRepository implements AppRepository {
   }
 
   @override
-  Future<void> importBackup(BackupData data) {
+  Future<void> validateBackup(BackupData data) async {
     _validateBackup(data);
-    return _database.replaceAll(
+  }
+
+  @override
+  Future<void> importBackup(BackupData data) async {
+    _validateBackup(data);
+    await _database.replaceAll(
       vehicles: data.vehicles,
       records: data.records,
       maintenanceRecords: data.maintenanceRecords,
@@ -68,7 +94,20 @@ class FuelRepository implements AppRepository {
   }
 
   void _validateBackup(BackupData data) {
+    _ensureUnique('车辆', data.vehicles.map((vehicle) => vehicle.id));
+    _ensureUnique('补能记录', data.records.map((record) => record.id));
+    _ensureUnique('保养记录', data.maintenanceRecords.map((record) => record.id));
+
     final vehicleIds = data.vehicles.map((vehicle) => vehicle.id).toSet();
+    for (final vehicle in data.vehicles) {
+      if (vehicle.name.trim().isEmpty) {
+        throw FormatException('车辆 ${vehicle.id} 名称不能为空');
+      }
+      if (vehicle.initialOdometerKm < 0) {
+        throw FormatException('车辆 ${vehicle.id} 初始里程不能为负数');
+      }
+    }
+
     for (final record in data.records) {
       if (!vehicleIds.contains(record.vehicleId)) {
         throw FormatException('记录引用了不存在的车辆: ${record.vehicleId}');
@@ -78,8 +117,9 @@ class FuelRepository implements AppRepository {
       if (!vehicleIds.contains(record.vehicleId)) {
         throw FormatException('保养记录引用了不存在的车辆: ${record.vehicleId}');
       }
-      if (record.cost < 0) {
-        throw FormatException('保养记录 ${record.id} 费用不能为负数');
+      final result = MaintenanceRecordValidator().validate(record);
+      if (!result.isValid) {
+        throw FormatException('保养记录 ${record.id} 无效: ${result.message}');
       }
     }
 
@@ -97,6 +137,18 @@ class FuelRepository implements AppRepository {
           throw FormatException('记录 ${record.id} 无效: ${result.message}');
         }
         accepted.add(record);
+      }
+    }
+  }
+
+  void _ensureUnique(String label, Iterable<String> ids) {
+    final seen = <String>{};
+    for (final id in ids) {
+      if (id.trim().isEmpty) {
+        throw FormatException('$label ID 不能为空');
+      }
+      if (!seen.add(id)) {
+        throw FormatException('$label ID 重复: $id');
       }
     }
   }
