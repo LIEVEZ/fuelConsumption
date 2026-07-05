@@ -40,6 +40,7 @@ class _RefuelScreenState extends State<RefuelScreen> {
   DateTime _date = DateTime.now();
   bool _isFull = true;
   bool _warningLightOn = false;
+  String _fuelGrade = '92#汽油';
   bool _syncingAmounts = false;
   _MachineField _lastMachineField = _MachineField.unitPrice;
   _PaymentField _lastPaymentField = _PaymentField.discount;
@@ -222,9 +223,12 @@ class _RefuelScreenState extends State<RefuelScreen> {
             ),
           ),
         const SizedBox(height: 28),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: _OptionalSection(),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _OptionalSection(
+            fuelGrade: _fuelGrade,
+            onFuelGradeTap: _pickFuelGrade,
+          ),
         ),
       ],
     );
@@ -378,6 +382,34 @@ class _RefuelScreenState extends State<RefuelScreen> {
     });
   }
 
+  Future<void> _pickFuelGrade() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
+            for (final grade in _fuelGrades)
+              ListTile(
+                title: Text(grade),
+                trailing: grade == _fuelGrade
+                    ? Icon(
+                        Icons.check_circle,
+                        color: Theme.of(context).colorScheme.primary,
+                      )
+                    : null,
+                onTap: () => Navigator.of(context).pop(grade),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _fuelGrade = selected);
+  }
+
   Future<void> _save() async {
     final odometer = double.tryParse(_odometerController.text);
     final inputLiters = double.tryParse(_litersController.text);
@@ -422,6 +454,7 @@ class _RefuelScreenState extends State<RefuelScreen> {
       if (machineAmount > 0) '机显金额 ${machineAmount.toStringAsFixed(2)} 元',
       if (_discount > 0) '优惠 ${_discount.toStringAsFixed(2)} 元',
       if (paidAmount > 0) '实付金额 ${paidAmount.toStringAsFixed(2)} 元',
+      _fuelGrade,
       _noteController.text.trim(),
     ].where((item) => item.isNotEmpty).join(' · ');
     final record = EnergyRecord.fuel(
@@ -681,7 +714,13 @@ class _SegmentButton extends StatelessWidget {
 }
 
 class _OptionalSection extends StatelessWidget {
-  const _OptionalSection();
+  const _OptionalSection({
+    required this.fuelGrade,
+    required this.onFuelGradeTap,
+  });
+
+  final String fuelGrade;
+  final VoidCallback onFuelGradeTap;
 
   @override
   Widget build(BuildContext context) {
@@ -689,12 +728,12 @@ class _OptionalSection extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
-          children: const [
-            SectionHeader(title: '选填项'),
-            SizedBox(height: 16),
-            _OptionTile(label: '加油站', value: ''),
-            Divider(height: 1),
-            _OptionTile(label: '燃油标号', value: '92#汽油'),
+          children: [
+            const SectionHeader(title: '选填项'),
+            const SizedBox(height: 16),
+            const _OptionTile(label: '加油站', value: ''),
+            const Divider(height: 1),
+            _OptionTile(label: '燃油标号', value: fuelGrade, onTap: onFuelGradeTap),
           ],
         ),
       ),
@@ -703,10 +742,11 @@ class _OptionalSection extends StatelessWidget {
 }
 
 class _OptionTile extends StatelessWidget {
-  const _OptionTile({required this.label, required this.value});
+  const _OptionTile({required this.label, required this.value, this.onTap});
 
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -720,6 +760,18 @@ class _OptionTile extends StatelessWidget {
           const Icon(Icons.chevron_right),
         ],
       ),
+      onTap: onTap,
     );
   }
 }
+
+const _fuelGrades = [
+  '89#汽油',
+  '92#汽油',
+  '95#汽油',
+  '98#汽油',
+  '0#柴油',
+  '-10#柴油',
+  '-20#柴油',
+  '-35#柴油',
+];
