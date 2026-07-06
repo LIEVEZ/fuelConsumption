@@ -624,6 +624,39 @@ class $EnergyRecordRowsTable extends EnergyRecordRows
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _machineAmountMeta = const VerificationMeta(
+    'machineAmount',
+  );
+  @override
+  late final GeneratedColumn<double> machineAmount = GeneratedColumn<double>(
+    'machine_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _paidAmountMeta = const VerificationMeta(
+    'paidAmount',
+  );
+  @override
+  late final GeneratedColumn<double> paidAmount = GeneratedColumn<double>(
+    'paid_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _discountAmountMeta = const VerificationMeta(
+    'discountAmount',
+  );
+  @override
+  late final GeneratedColumn<double> discountAmount = GeneratedColumn<double>(
+    'discount_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _noteMeta = const VerificationMeta('note');
   @override
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
@@ -650,6 +683,9 @@ class $EnergyRecordRowsTable extends EnergyRecordRows
     fuelUnitPrice,
     electricityUnitPrice,
     chargeMode,
+    machineAmount,
+    paidAmount,
+    discountAmount,
     note,
   ];
   @override
@@ -767,6 +803,30 @@ class $EnergyRecordRowsTable extends EnergyRecordRows
         chargeMode.isAcceptableOrUnknown(data['charge_mode']!, _chargeModeMeta),
       );
     }
+    if (data.containsKey('machine_amount')) {
+      context.handle(
+        _machineAmountMeta,
+        machineAmount.isAcceptableOrUnknown(
+          data['machine_amount']!,
+          _machineAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('paid_amount')) {
+      context.handle(
+        _paidAmountMeta,
+        paidAmount.isAcceptableOrUnknown(data['paid_amount']!, _paidAmountMeta),
+      );
+    }
+    if (data.containsKey('discount_amount')) {
+      context.handle(
+        _discountAmountMeta,
+        discountAmount.isAcceptableOrUnknown(
+          data['discount_amount']!,
+          _discountAmountMeta,
+        ),
+      );
+    }
     if (data.containsKey('note')) {
       context.handle(
         _noteMeta,
@@ -838,6 +898,18 @@ class $EnergyRecordRowsTable extends EnergyRecordRows
         DriftSqlType.string,
         data['${effectivePrefix}charge_mode'],
       ),
+      machineAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}machine_amount'],
+      ),
+      paidAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}paid_amount'],
+      ),
+      discountAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}discount_amount'],
+      ),
       note: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}note'],
@@ -866,6 +938,9 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
   final double? fuelUnitPrice;
   final double? electricityUnitPrice;
   final String? chargeMode;
+  final double? machineAmount;
+  final double? paidAmount;
+  final double? discountAmount;
   final String note;
   const EnergyRecordRow({
     required this.id,
@@ -882,6 +957,9 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
     this.fuelUnitPrice,
     this.electricityUnitPrice,
     this.chargeMode,
+    this.machineAmount,
+    this.paidAmount,
+    this.discountAmount,
     required this.note,
   });
   @override
@@ -911,6 +989,15 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
     if (!nullToAbsent || chargeMode != null) {
       map['charge_mode'] = Variable<String>(chargeMode);
     }
+    if (!nullToAbsent || machineAmount != null) {
+      map['machine_amount'] = Variable<double>(machineAmount);
+    }
+    if (!nullToAbsent || paidAmount != null) {
+      map['paid_amount'] = Variable<double>(paidAmount);
+    }
+    if (!nullToAbsent || discountAmount != null) {
+      map['discount_amount'] = Variable<double>(discountAmount);
+    }
     map['note'] = Variable<String>(note);
     return map;
   }
@@ -939,6 +1026,15 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
       chargeMode: chargeMode == null && nullToAbsent
           ? const Value.absent()
           : Value(chargeMode),
+      machineAmount: machineAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(machineAmount),
+      paidAmount: paidAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paidAmount),
+      discountAmount: discountAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(discountAmount),
       note: Value(note),
     );
   }
@@ -965,6 +1061,9 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
         json['electricityUnitPrice'],
       ),
       chargeMode: serializer.fromJson<String?>(json['chargeMode']),
+      machineAmount: serializer.fromJson<double?>(json['machineAmount']),
+      paidAmount: serializer.fromJson<double?>(json['paidAmount']),
+      discountAmount: serializer.fromJson<double?>(json['discountAmount']),
       note: serializer.fromJson<String>(json['note']),
     );
   }
@@ -986,6 +1085,9 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
       'fuelUnitPrice': serializer.toJson<double?>(fuelUnitPrice),
       'electricityUnitPrice': serializer.toJson<double?>(electricityUnitPrice),
       'chargeMode': serializer.toJson<String?>(chargeMode),
+      'machineAmount': serializer.toJson<double?>(machineAmount),
+      'paidAmount': serializer.toJson<double?>(paidAmount),
+      'discountAmount': serializer.toJson<double?>(discountAmount),
       'note': serializer.toJson<String>(note),
     };
   }
@@ -1005,6 +1107,9 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
     Value<double?> fuelUnitPrice = const Value.absent(),
     Value<double?> electricityUnitPrice = const Value.absent(),
     Value<String?> chargeMode = const Value.absent(),
+    Value<double?> machineAmount = const Value.absent(),
+    Value<double?> paidAmount = const Value.absent(),
+    Value<double?> discountAmount = const Value.absent(),
     String? note,
   }) => EnergyRecordRow(
     id: id ?? this.id,
@@ -1025,6 +1130,13 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
         ? electricityUnitPrice.value
         : this.electricityUnitPrice,
     chargeMode: chargeMode.present ? chargeMode.value : this.chargeMode,
+    machineAmount: machineAmount.present
+        ? machineAmount.value
+        : this.machineAmount,
+    paidAmount: paidAmount.present ? paidAmount.value : this.paidAmount,
+    discountAmount: discountAmount.present
+        ? discountAmount.value
+        : this.discountAmount,
     note: note ?? this.note,
   );
   EnergyRecordRow copyWithCompanion(EnergyRecordRowsCompanion data) {
@@ -1055,6 +1167,15 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
       chargeMode: data.chargeMode.present
           ? data.chargeMode.value
           : this.chargeMode,
+      machineAmount: data.machineAmount.present
+          ? data.machineAmount.value
+          : this.machineAmount,
+      paidAmount: data.paidAmount.present
+          ? data.paidAmount.value
+          : this.paidAmount,
+      discountAmount: data.discountAmount.present
+          ? data.discountAmount.value
+          : this.discountAmount,
       note: data.note.present ? data.note.value : this.note,
     );
   }
@@ -1076,6 +1197,9 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
           ..write('fuelUnitPrice: $fuelUnitPrice, ')
           ..write('electricityUnitPrice: $electricityUnitPrice, ')
           ..write('chargeMode: $chargeMode, ')
+          ..write('machineAmount: $machineAmount, ')
+          ..write('paidAmount: $paidAmount, ')
+          ..write('discountAmount: $discountAmount, ')
           ..write('note: $note')
           ..write(')'))
         .toString();
@@ -1097,6 +1221,9 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
     fuelUnitPrice,
     electricityUnitPrice,
     chargeMode,
+    machineAmount,
+    paidAmount,
+    discountAmount,
     note,
   );
   @override
@@ -1117,6 +1244,9 @@ class EnergyRecordRow extends DataClass implements Insertable<EnergyRecordRow> {
           other.fuelUnitPrice == this.fuelUnitPrice &&
           other.electricityUnitPrice == this.electricityUnitPrice &&
           other.chargeMode == this.chargeMode &&
+          other.machineAmount == this.machineAmount &&
+          other.paidAmount == this.paidAmount &&
+          other.discountAmount == this.discountAmount &&
           other.note == this.note);
 }
 
@@ -1135,6 +1265,9 @@ class EnergyRecordRowsCompanion extends UpdateCompanion<EnergyRecordRow> {
   final Value<double?> fuelUnitPrice;
   final Value<double?> electricityUnitPrice;
   final Value<String?> chargeMode;
+  final Value<double?> machineAmount;
+  final Value<double?> paidAmount;
+  final Value<double?> discountAmount;
   final Value<String> note;
   final Value<int> rowid;
   const EnergyRecordRowsCompanion({
@@ -1152,6 +1285,9 @@ class EnergyRecordRowsCompanion extends UpdateCompanion<EnergyRecordRow> {
     this.fuelUnitPrice = const Value.absent(),
     this.electricityUnitPrice = const Value.absent(),
     this.chargeMode = const Value.absent(),
+    this.machineAmount = const Value.absent(),
+    this.paidAmount = const Value.absent(),
+    this.discountAmount = const Value.absent(),
     this.note = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1170,6 +1306,9 @@ class EnergyRecordRowsCompanion extends UpdateCompanion<EnergyRecordRow> {
     this.fuelUnitPrice = const Value.absent(),
     this.electricityUnitPrice = const Value.absent(),
     this.chargeMode = const Value.absent(),
+    this.machineAmount = const Value.absent(),
+    this.paidAmount = const Value.absent(),
+    this.discountAmount = const Value.absent(),
     this.note = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1195,6 +1334,9 @@ class EnergyRecordRowsCompanion extends UpdateCompanion<EnergyRecordRow> {
     Expression<double>? fuelUnitPrice,
     Expression<double>? electricityUnitPrice,
     Expression<String>? chargeMode,
+    Expression<double>? machineAmount,
+    Expression<double>? paidAmount,
+    Expression<double>? discountAmount,
     Expression<String>? note,
     Expression<int>? rowid,
   }) {
@@ -1214,6 +1356,9 @@ class EnergyRecordRowsCompanion extends UpdateCompanion<EnergyRecordRow> {
       if (electricityUnitPrice != null)
         'electricity_unit_price': electricityUnitPrice,
       if (chargeMode != null) 'charge_mode': chargeMode,
+      if (machineAmount != null) 'machine_amount': machineAmount,
+      if (paidAmount != null) 'paid_amount': paidAmount,
+      if (discountAmount != null) 'discount_amount': discountAmount,
       if (note != null) 'note': note,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1234,6 +1379,9 @@ class EnergyRecordRowsCompanion extends UpdateCompanion<EnergyRecordRow> {
     Value<double?>? fuelUnitPrice,
     Value<double?>? electricityUnitPrice,
     Value<String?>? chargeMode,
+    Value<double?>? machineAmount,
+    Value<double?>? paidAmount,
+    Value<double?>? discountAmount,
     Value<String>? note,
     Value<int>? rowid,
   }) {
@@ -1252,6 +1400,9 @@ class EnergyRecordRowsCompanion extends UpdateCompanion<EnergyRecordRow> {
       fuelUnitPrice: fuelUnitPrice ?? this.fuelUnitPrice,
       electricityUnitPrice: electricityUnitPrice ?? this.electricityUnitPrice,
       chargeMode: chargeMode ?? this.chargeMode,
+      machineAmount: machineAmount ?? this.machineAmount,
+      paidAmount: paidAmount ?? this.paidAmount,
+      discountAmount: discountAmount ?? this.discountAmount,
       note: note ?? this.note,
       rowid: rowid ?? this.rowid,
     );
@@ -1304,6 +1455,15 @@ class EnergyRecordRowsCompanion extends UpdateCompanion<EnergyRecordRow> {
     if (chargeMode.present) {
       map['charge_mode'] = Variable<String>(chargeMode.value);
     }
+    if (machineAmount.present) {
+      map['machine_amount'] = Variable<double>(machineAmount.value);
+    }
+    if (paidAmount.present) {
+      map['paid_amount'] = Variable<double>(paidAmount.value);
+    }
+    if (discountAmount.present) {
+      map['discount_amount'] = Variable<double>(discountAmount.value);
+    }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
@@ -1330,6 +1490,9 @@ class EnergyRecordRowsCompanion extends UpdateCompanion<EnergyRecordRow> {
           ..write('fuelUnitPrice: $fuelUnitPrice, ')
           ..write('electricityUnitPrice: $electricityUnitPrice, ')
           ..write('chargeMode: $chargeMode, ')
+          ..write('machineAmount: $machineAmount, ')
+          ..write('paidAmount: $paidAmount, ')
+          ..write('discountAmount: $discountAmount, ')
           ..write('note: $note, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2279,6 +2442,9 @@ typedef $$EnergyRecordRowsTableCreateCompanionBuilder =
       Value<double?> fuelUnitPrice,
       Value<double?> electricityUnitPrice,
       Value<String?> chargeMode,
+      Value<double?> machineAmount,
+      Value<double?> paidAmount,
+      Value<double?> discountAmount,
       Value<String> note,
       Value<int> rowid,
     });
@@ -2298,6 +2464,9 @@ typedef $$EnergyRecordRowsTableUpdateCompanionBuilder =
       Value<double?> fuelUnitPrice,
       Value<double?> electricityUnitPrice,
       Value<String?> chargeMode,
+      Value<double?> machineAmount,
+      Value<double?> paidAmount,
+      Value<double?> discountAmount,
       Value<String> note,
       Value<int> rowid,
     });
@@ -2400,6 +2569,21 @@ class $$EnergyRecordRowsTableFilterComposer
 
   ColumnFilters<String> get chargeMode => $composableBuilder(
     column: $table.chargeMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get machineAmount => $composableBuilder(
+    column: $table.machineAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get paidAmount => $composableBuilder(
+    column: $table.paidAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2506,6 +2690,21 @@ class $$EnergyRecordRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get machineAmount => $composableBuilder(
+    column: $table.machineAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get paidAmount => $composableBuilder(
+    column: $table.paidAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get note => $composableBuilder(
     column: $table.note,
     builder: (column) => ColumnOrderings(column),
@@ -2595,6 +2794,21 @@ class $$EnergyRecordRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get machineAmount => $composableBuilder(
+    column: $table.machineAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get paidAmount => $composableBuilder(
+    column: $table.paidAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
 
@@ -2666,6 +2880,9 @@ class $$EnergyRecordRowsTableTableManager
                 Value<double?> fuelUnitPrice = const Value.absent(),
                 Value<double?> electricityUnitPrice = const Value.absent(),
                 Value<String?> chargeMode = const Value.absent(),
+                Value<double?> machineAmount = const Value.absent(),
+                Value<double?> paidAmount = const Value.absent(),
+                Value<double?> discountAmount = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EnergyRecordRowsCompanion(
@@ -2683,6 +2900,9 @@ class $$EnergyRecordRowsTableTableManager
                 fuelUnitPrice: fuelUnitPrice,
                 electricityUnitPrice: electricityUnitPrice,
                 chargeMode: chargeMode,
+                machineAmount: machineAmount,
+                paidAmount: paidAmount,
+                discountAmount: discountAmount,
                 note: note,
                 rowid: rowid,
               ),
@@ -2702,6 +2922,9 @@ class $$EnergyRecordRowsTableTableManager
                 Value<double?> fuelUnitPrice = const Value.absent(),
                 Value<double?> electricityUnitPrice = const Value.absent(),
                 Value<String?> chargeMode = const Value.absent(),
+                Value<double?> machineAmount = const Value.absent(),
+                Value<double?> paidAmount = const Value.absent(),
+                Value<double?> discountAmount = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EnergyRecordRowsCompanion.insert(
@@ -2719,6 +2942,9 @@ class $$EnergyRecordRowsTableTableManager
                 fuelUnitPrice: fuelUnitPrice,
                 electricityUnitPrice: electricityUnitPrice,
                 chargeMode: chargeMode,
+                machineAmount: machineAmount,
+                paidAmount: paidAmount,
+                discountAmount: discountAmount,
                 note: note,
                 rowid: rowid,
               ),

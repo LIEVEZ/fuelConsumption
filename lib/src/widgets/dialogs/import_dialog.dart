@@ -1,18 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:fuel_consumption/src/data/app_repository.dart';
-import 'package:fuel_consumption/src/data/backup_codec.dart';
+import 'package:fuel_consumption/src/application/backup_import_service.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 
-class ImportBackupResult {
-  const ImportBackupResult({required this.preImportBackupJson});
-
-  final String preImportBackupJson;
-}
-
 class ImportDialog extends StatefulWidget {
-  const ImportDialog({required this.repository, super.key});
+  const ImportDialog({required this.actions, super.key});
 
-  final AppRepository repository;
+  final ImportDialogActions actions;
 
   @override
   State<ImportDialog> createState() => _ImportDialogState();
@@ -97,8 +90,7 @@ class _ImportDialogState extends State<ImportDialog> {
       _error = null;
     });
     try {
-      final backup = BackupCodec().decode(_controller.text);
-      await widget.repository.validateBackup(backup);
+      final backup = await widget.actions.parseAndValidate(_controller.text);
       if (!mounted) return;
       setState(() {
         _preview = backup;
@@ -126,13 +118,9 @@ class _ImportDialogState extends State<ImportDialog> {
       _error = null;
     });
     try {
-      final preImportBackup = await widget.repository.exportBackup();
-      final preImportBackupJson = BackupCodec().encode(preImportBackup);
-      await widget.repository.importBackup(backup);
+      final result = await widget.actions.importBackup(backup);
       if (!mounted) return;
-      Navigator.of(
-        context,
-      ).pop(ImportBackupResult(preImportBackupJson: preImportBackupJson));
+      Navigator.of(context).pop(result);
     } on Object catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());

@@ -76,6 +76,10 @@ class RefuelRecordAssembler {
     if (liters <= 0 || effectiveUnitPrice <= 0 || paidAmount <= 0) {
       return const RefuelRecordAssemblyResult.failure('加油量、实付金额必须大于 0');
     }
+    final discountAmount = RefuelAmountCalculator.paidAmountFromDiscount(
+      machineAmount,
+      paidAmount,
+    );
 
     final note = [
       if (draft.warningLightOn) '油灯亮',
@@ -97,6 +101,9 @@ class RefuelRecordAssembler {
         liters: liters,
         unitPrice: effectiveUnitPrice,
         isFull: draft.isFull,
+        machineAmount: machineAmount,
+        paidAmount: paidAmount,
+        discountAmount: discountAmount,
         note: note,
       ),
     );

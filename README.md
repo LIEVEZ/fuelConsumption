@@ -31,8 +31,9 @@ lib/
 ├─ main.dart                  # 应用入口和真实 repository 组装
 └─ src/
    ├─ app.dart                # 根 UI、主题和 ProviderScope
-   ├─ screens/                # 油耗、费用、加油、保养、我的中心等页面
-   ├─ widgets/                # 底部导航、图表、费用/我的/加油组件、创建弹层和弹窗
+   ├─ application/            # Dashboard 查询、导入备份、车辆创建等应用编排服务
+   ├─ screens/                # 页面编排和表单控制器
+   ├─ widgets/                # 底部导航、首页/费用/我的/加油组件、创建弹层和弹窗
    ├─ domain/
    │  ├─ models.dart          # 车辆、补能记录、备份等领域模型
    │  ├─ statistics.dart      # 能耗统计快照
@@ -46,10 +47,13 @@ lib/
    └─ data/
       ├─ app_repository.dart  # 数据访问抽象
       ├─ repository_provider.dart # Riverpod repository 生命周期管理
-      ├─ fuel_repository.dart # repository 实现和导入校验
-      ├─ app_database.dart    # Drift 表和数据库操作
+      ├─ fuel_repository.dart # repository 实现
+      ├─ app_database.dart    # Drift 数据库 API
+      ├─ app_database_*       # 连接、表定义、迁移、DAO 和 row/domain 映射
       ├─ app_database.g.dart  # Drift 生成代码
-      └─ backup_codec.dart    # JSON 备份编码/解码
+      ├─ backup_codec.dart    # JSON 备份编码/解码
+      ├─ backup_schema.dart   # 备份格式版本
+      └─ backup_validator.dart # 备份语义校验
 ```
 
 更完整的架构说明见 [docs/架构.md](docs/架构.md)。
@@ -87,11 +91,13 @@ flutter test --concurrency 1
 
 - 领域统计：燃油、电车和少量记录场景。
 - 费用统计：能源费用、保养费用、年度费用和费用明细聚合。
-- 记录校验：能源数量、里程顺序、保养费用和仓储保存校验。
-- 备份编码：可读错误提示、必填字段校验和导入预览。
-- 加油表单：金额联动、保存组装、note 协议和错误文案。
+- 记录校验：能源数量、里程顺序、保养费用、仓储保存和备份语义校验。
+- 备份编码：可读错误提示、必填字段校验、round-trip、旧备份兼容和导入 action。
+- Dashboard 数据流：车辆选择回退、空/错误/已加载状态、记录排序和统计组装。
+- 燃油优惠：结构化保存机显金额、实付金额和优惠金额，并兼容旧备注解析。
+- 加油表单：金额联动控制器、保存组装、note 协议和错误文案。
 - Repository：备份重复 ID、车辆引用和保养记录校验。
-- Widget：导入预览、记一笔弹层、我的中心和加油页基础流程。
+- Widget：导入预览、记一笔弹层、我的中心、加油页和保养页基础流程。
 
 ## CI
 
@@ -107,7 +113,7 @@ CI 不执行 release 构建和应用签名；当前不需要配置 GitHub Secret
 
 ## 数据和备份
 
-运行数据保存在应用文档目录下的 `fuel_consumption.sqlite`。数据库 schema version 当前为 `3`，包含车辆表、补能记录表和保养记录表。JSON 备份格式由 `BackupCodec` 维护，当前 schema version 为 `1`，并兼容不含 `maintenanceRecords` 的旧备份。
+运行数据保存在应用文档目录下的 `fuel_consumption.sqlite`。数据库 schema version 当前为 `4`，包含车辆表、补能记录表、保养记录表和燃油优惠结构化字段。JSON 备份格式由 `BackupCodec` 维护，当前 schema version 为 `1`，并兼容不含 `maintenanceRecords` 或燃油优惠结构化字段的旧备份。
 
 导入备份时会校验：
 
@@ -119,6 +125,5 @@ CI 不执行 release 构建和应用签名；当前不需要配置 GitHub Secret
 
 ## 后续计划
 
-- 扩充测试：补充充电/插混补能表单、多车型切换、数据库迁移和备份 round-trip。
-- 继续拆分 `ConsumptionScreen`、`ExpenseScreen` 和 `RefuelScreen` 中的大型私有组件。
+- 扩充测试：补充充电/插混补能表单、多车型切换、数据库迁移和 repository 导入导出 round-trip。
 - 产品化 Android identity：正式 applicationId、应用名、图标、release 签名。

@@ -1,9 +1,10 @@
 import 'dart:convert';
 
+import 'package:fuel_consumption/src/data/backup_schema.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 
 class BackupCodec {
-  static const currentSchemaVersion = 1;
+  static const currentSchemaVersion = BackupSchema.currentVersion;
 
   String encode(BackupData data) {
     return const JsonEncoder.withIndent('  ').convert({

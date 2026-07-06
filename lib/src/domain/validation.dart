@@ -28,7 +28,10 @@ class RecordValidator {
     if (record.totalCost <= 0 ||
         record.unitPrice < 0 ||
         (record.fuelUnitPrice ?? 0) < 0 ||
-        (record.electricityUnitPrice ?? 0) < 0) {
+        (record.electricityUnitPrice ?? 0) < 0 ||
+        (record.machineAmount ?? 0) < 0 ||
+        (record.paidAmount ?? 0) < 0 ||
+        (record.discountAmount ?? 0) < 0) {
       return const ValidationResult.invalid('金额必须大于 0');
     }
 

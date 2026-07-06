@@ -8,6 +8,18 @@ class RecordAmounts {
   }
 
   static double discountFrom(EnergyRecord record) {
+    final structuredDiscount = record.discountAmount;
+    if (structuredDiscount != null) {
+      return structuredDiscount;
+    }
+    final structuredMachineAmount = record.machineAmount;
+    final structuredPaidAmount = record.paidAmount;
+    if (structuredMachineAmount != null && structuredPaidAmount != null) {
+      return (structuredMachineAmount - structuredPaidAmount)
+          .clamp(0, double.infinity)
+          .toDouble();
+    }
+
     final explicitDiscount = _numberAfterLabel(record.note, '优惠');
     if (explicitDiscount != null) {
       return explicitDiscount;

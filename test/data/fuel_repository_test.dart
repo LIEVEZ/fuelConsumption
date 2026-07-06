@@ -66,6 +66,39 @@ void main() {
     );
   });
 
+  test('persists structured refuel amount fields', () async {
+    final vehicle = Vehicle(
+      id: 'vehicle-1',
+      name: '测试车',
+      type: VehicleType.fuel,
+      initialOdometerKm: 0,
+      isDefault: true,
+    );
+    await repository.saveVehicle(vehicle);
+
+    await repository.saveRecord(
+      EnergyRecord.fuel(
+        id: 'record-1',
+        vehicleId: vehicle.id,
+        date: DateTime(2026),
+        odometerKm: 100,
+        liters: 20,
+        unitPrice: 7,
+        isFull: true,
+        machineAmount: 160,
+        paidAmount: 140,
+        discountAmount: 20,
+      ),
+    );
+
+    final record = (await repository.getRecords(vehicle.id)).single;
+
+    expect(record.machineAmount, 160);
+    expect(record.paidAmount, 140);
+    expect(record.discountAmount, 20);
+    expect(record.totalCost, 140);
+  });
+
   test('validateBackup rejects duplicate record ids', () async {
     final vehicle = Vehicle(
       id: 'vehicle-1',

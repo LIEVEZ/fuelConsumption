@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fuel_consumption/src/domain/fuel_grades.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
-import 'package:fuel_consumption/src/domain/refuel_amount_calculator.dart';
 import 'package:fuel_consumption/src/domain/refuel_record_assembler.dart';
 import 'package:fuel_consumption/src/domain/validation.dart';
+import 'package:fuel_consumption/src/screens/refuel_form_controller.dart';
 import 'package:fuel_consumption/src/theme/app_colors.dart';
 import 'package:fuel_consumption/src/utils/energy_ui.dart';
 import 'package:fuel_consumption/src/widgets/refuel/refuel_form_widgets.dart';
@@ -28,25 +28,13 @@ class RefuelScreen extends StatefulWidget {
 }
 
 class _RefuelScreenState extends State<RefuelScreen> {
-  final _odometerController = TextEditingController();
-  final _unitPriceController = TextEditingController(text: '7.25');
-  final _litersController = TextEditingController(text: '0.00');
-  final _machineAmountController = TextEditingController(text: '0.00');
-  final _paidUnitPriceController = TextEditingController(text: '0.00');
-  final _discountController = TextEditingController(text: '0.00');
-  final _paidAmountController = TextEditingController(text: '0.00');
-  final _noteController = TextEditingController();
+  late final RefuelFormController _form;
   DateTime _date = DateTime.now();
   bool _isFull = true;
   bool _warningLightOn = false;
   bool _saving = false;
   String _fuelGrade = defaultFuelGrade;
-  bool _syncingAmounts = false;
-  RefuelMachineField _lastMachineField = RefuelMachineField.unitPrice;
-  RefuelPaymentField _lastPaymentField = RefuelPaymentField.discount;
   String? _error;
-
-  double get _discount => double.tryParse(_discountController.text) ?? 0;
 
   @override
   void initState() {
@@ -54,39 +42,22 @@ class _RefuelScreenState extends State<RefuelScreen> {
     final latest = widget.records.isEmpty
         ? widget.vehicle.initialOdometerKm
         : widget.records.last.odometerKm;
-    _odometerController.text = latest.toStringAsFixed(0);
-    _unitPriceController.addListener(
-      () => _onMachineFieldChanged(RefuelMachineField.unitPrice),
-    );
-    _litersController.addListener(
-      () => _onMachineFieldChanged(RefuelMachineField.liters),
-    );
-    _machineAmountController.addListener(
-      () => _onMachineFieldChanged(RefuelMachineField.amount),
-    );
-    _discountController.addListener(
-      () => _onPaymentFieldChanged(RefuelPaymentField.discount),
-    );
-    _paidAmountController.addListener(
-      () => _onPaymentFieldChanged(RefuelPaymentField.paidAmount),
-    );
-    _paidUnitPriceController.addListener(
-      () => _onPaymentFieldChanged(RefuelPaymentField.paidUnitPrice),
-    );
-    _odometerController.addListener(() => setState(() {}));
+    _form = RefuelFormController(initialOdometerKm: latest)
+      ..addListener(_handleFormChanged);
   }
 
   @override
   void dispose() {
-    _odometerController.dispose();
-    _unitPriceController.dispose();
-    _litersController.dispose();
-    _machineAmountController.dispose();
-    _paidUnitPriceController.dispose();
-    _discountController.dispose();
-    _paidAmountController.dispose();
-    _noteController.dispose();
+    _form
+      ..removeListener(_handleFormChanged)
+      ..dispose();
     super.dispose();
+  }
+
+  void _handleFormChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -111,7 +82,7 @@ class _RefuelScreenState extends State<RefuelScreen> {
             RefuelInputRow(
               label: '当前里程',
               required: true,
-              controller: _odometerController,
+              controller: _form.odometerController,
               suffix: '公里',
             ),
             Padding(
@@ -128,16 +99,20 @@ class _RefuelScreenState extends State<RefuelScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: RefuelCompactInput(controller: _unitPriceController),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: RefuelCompactInput(controller: _litersController),
+                    child: RefuelCompactInput(
+                      controller: _form.unitPriceController,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: RefuelCompactInput(
-                      controller: _machineAmountController,
+                      controller: _form.litersController,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: RefuelCompactInput(
+                      controller: _form.machineAmountController,
                     ),
                   ),
                 ],
@@ -151,7 +126,7 @@ class _RefuelScreenState extends State<RefuelScreen> {
                     child: RefuelFieldColumn(
                       label: '实付单价',
                       child: RefuelCompactInput(
-                        controller: _paidUnitPriceController,
+                        controller: _form.paidUnitPriceController,
                       ),
                     ),
                   ),
@@ -160,7 +135,7 @@ class _RefuelScreenState extends State<RefuelScreen> {
                     child: RefuelFieldColumn(
                       label: '优惠金额',
                       child: RefuelCompactInput(
-                        controller: _discountController,
+                        controller: _form.discountController,
                       ),
                     ),
                   ),
@@ -169,7 +144,7 @@ class _RefuelScreenState extends State<RefuelScreen> {
                     child: RefuelFieldColumn(
                       label: '实付金额',
                       child: RefuelCompactInput(
-                        controller: _paidAmountController,
+                        controller: _form.paidAmountController,
                       ),
                     ),
                   ),
@@ -241,138 +216,6 @@ class _RefuelScreenState extends State<RefuelScreen> {
     );
   }
 
-  RefuelAmountValues get _amountValues {
-    final unitPrice = _parseAmount(_unitPriceController);
-    final liters = _parseAmount(_litersController);
-    final machineAmount =
-        double.tryParse(_machineAmountController.text) ?? unitPrice * liters;
-    final paidAmount =
-        double.tryParse(_paidAmountController.text) ??
-        RefuelAmountCalculator.paidAmountFromDiscount(machineAmount, _discount);
-    return RefuelAmountValues(
-      unitPrice: unitPrice,
-      liters: liters,
-      machineAmount: machineAmount,
-      paidUnitPrice: _parseAmount(_paidUnitPriceController),
-      discount: _discount,
-      paidAmount: paidAmount,
-    );
-  }
-
-  double _parseAmount(TextEditingController controller) {
-    return double.tryParse(controller.text) ?? 0;
-  }
-
-  void _onMachineFieldChanged(RefuelMachineField field) {
-    if (_syncingAmounts) return;
-    _lastMachineField = field;
-    _syncMachineFields();
-  }
-
-  void _onPaymentFieldChanged(RefuelPaymentField field) {
-    if (_syncingAmounts) return;
-    _lastPaymentField = field;
-    _syncPaymentFields();
-  }
-
-  void _syncMachineFields() {
-    _syncingAmounts = true;
-    final values = RefuelAmountCalculator.syncMachineFields(
-      _amountValues,
-      _lastMachineField,
-    );
-    _applyMachineValues(values);
-    _syncingAmounts = false;
-    _syncPaymentFields();
-    setState(() {});
-  }
-
-  void _syncPaymentFields() {
-    if (_syncingAmounts) {
-      return;
-    }
-    _syncingAmounts = true;
-    final values = RefuelAmountCalculator.syncPaymentFields(
-      _amountValues,
-      _lastPaymentField,
-    );
-    _applyPaymentValues(values);
-    _syncingAmounts = false;
-    setState(() {});
-  }
-
-  void _applyMachineValues(RefuelAmountValues values) {
-    switch (_lastMachineField) {
-      case RefuelMachineField.unitPrice:
-        _setControllerText(
-          _litersController,
-          RefuelAmountCalculator.formatAmount(values.liters),
-        );
-        _setControllerText(
-          _machineAmountController,
-          RefuelAmountCalculator.formatAmount(values.machineAmount),
-        );
-      case RefuelMachineField.liters:
-        _setControllerText(
-          _unitPriceController,
-          RefuelAmountCalculator.formatAmount(values.unitPrice),
-        );
-        _setControllerText(
-          _machineAmountController,
-          RefuelAmountCalculator.formatAmount(values.machineAmount),
-        );
-      case RefuelMachineField.amount:
-        _setControllerText(
-          _unitPriceController,
-          RefuelAmountCalculator.formatAmount(values.unitPrice),
-        );
-        _setControllerText(
-          _litersController,
-          RefuelAmountCalculator.formatAmount(values.liters),
-        );
-    }
-  }
-
-  void _applyPaymentValues(RefuelAmountValues values) {
-    switch (_lastPaymentField) {
-      case RefuelPaymentField.discount:
-        _setControllerText(
-          _paidUnitPriceController,
-          RefuelAmountCalculator.formatAmount(values.paidUnitPrice),
-        );
-        _setControllerText(
-          _paidAmountController,
-          RefuelAmountCalculator.formatAmount(values.paidAmount),
-        );
-      case RefuelPaymentField.paidAmount:
-        _setControllerText(
-          _paidUnitPriceController,
-          RefuelAmountCalculator.formatAmount(values.paidUnitPrice),
-        );
-        _setControllerText(
-          _discountController,
-          RefuelAmountCalculator.formatAmount(values.discount),
-        );
-      case RefuelPaymentField.paidUnitPrice:
-        _setControllerText(
-          _discountController,
-          RefuelAmountCalculator.formatAmount(values.discount),
-        );
-        _setControllerText(
-          _paidAmountController,
-          RefuelAmountCalculator.formatAmount(values.paidAmount),
-        );
-    }
-  }
-
-  void _setControllerText(TextEditingController controller, String value) {
-    if (controller.text == value) return;
-    controller.value = TextEditingValue(
-      text: value,
-      selection: TextSelection.collapsed(offset: value.length),
-    );
-  }
-
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -439,21 +282,13 @@ class _RefuelScreenState extends State<RefuelScreen> {
 
   Future<void> _save() async {
     final assembly = RefuelRecordAssembler.assemble(
-      RefuelRecordDraft(
+      _form.buildDraft(
         id: const Uuid().v4(),
         vehicleId: widget.vehicle.id,
         date: _date,
-        odometerText: _odometerController.text,
-        unitPriceText: _unitPriceController.text,
-        litersText: _litersController.text,
-        machineAmountText: _machineAmountController.text,
-        paidUnitPriceText: _paidUnitPriceController.text,
-        discountText: _discountController.text,
-        paidAmountText: _paidAmountController.text,
         isFull: _isFull,
         warningLightOn: _warningLightOn,
         fuelGrade: _fuelGrade,
-        noteText: _noteController.text,
       ),
     );
     if (!assembly.isSuccess) {

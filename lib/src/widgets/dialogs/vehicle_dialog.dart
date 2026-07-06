@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:fuel_consumption/src/data/app_repository.dart';
+import 'package:fuel_consumption/src/application/vehicle_commands.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
-import 'package:uuid/uuid.dart';
 
 class VehicleDialog extends StatefulWidget {
-  const VehicleDialog({required this.repository, super.key});
+  const VehicleDialog({required this.onSave, super.key});
 
-  final AppRepository repository;
+  final Future<void> Function(VehicleDraft draft) onSave;
 
   @override
   State<VehicleDialog> createState() => _VehicleDialogState();
@@ -148,14 +147,12 @@ class _VehicleDialogState extends State<VehicleDialog> {
       _error = null;
     });
     try {
-      await widget.repository.saveVehicle(
-        Vehicle(
-          id: const Uuid().v4(),
+      await widget.onSave(
+        VehicleDraft(
           name: name,
           type: _type,
           initialOdometerKm: double.tryParse(_odometerController.text) ?? 0,
           model: _modelController.text.trim(),
-          isDefault: true,
         ),
       );
       if (mounted) {

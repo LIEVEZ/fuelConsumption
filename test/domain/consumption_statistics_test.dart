@@ -95,7 +95,9 @@ void main() {
         costPerKm: 0.5,
         totalDistanceKm: 200,
       ),
-      records: [_fuelRecord(id: 'energy-1', note: '机显金额 80.00 元 · 优惠 10.00 元')],
+      records: [
+        _fuelRecord(id: 'energy-1', machineAmount: 110, paidAmount: 100),
+      ],
       maintenanceRecords: [
         MaintenanceRecord(
           id: 'maintenance-1',
@@ -121,6 +123,8 @@ EnergyRecord _fuelRecord({
   double liters = 10,
   double unitPrice = 7,
   String note = '',
+  double? machineAmount,
+  double? paidAmount,
 }) {
   return EnergyRecord.fuel(
     id: id,
@@ -130,6 +134,8 @@ EnergyRecord _fuelRecord({
     liters: liters,
     unitPrice: unitPrice,
     isFull: true,
+    machineAmount: machineAmount,
+    paidAmount: paidAmount,
     note: note,
   );
 }

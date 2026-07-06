@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fuel_consumption/src/data/app_repository.dart';
+import 'package:fuel_consumption/src/application/backup_import_service.dart';
 import 'package:fuel_consumption/src/data/backup_codec.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 import 'package:fuel_consumption/src/widgets/dialogs/import_dialog.dart';
@@ -46,7 +46,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: ImportDialog(repository: _FakeRepository())),
+        home: Scaffold(body: ImportDialog(actions: _FakeImportDialogActions())),
       ),
     );
 
@@ -63,64 +63,14 @@ void main() {
   });
 }
 
-class _FakeRepository implements AppRepository {
+class _FakeImportDialogActions implements ImportDialogActions {
   @override
-  Future<void> deleteVehicle(String vehicleId) async {}
-
-  @override
-  Future<BackupData> exportBackup() async {
-    return BackupData(
-      schemaVersion: BackupCodec.currentSchemaVersion,
-      exportedAt: DateTime(2026),
-      vehicles: const [],
-      records: const [],
-    );
+  Future<ImportBackupResult> importBackup(BackupData data) async {
+    return const ImportBackupResult(preImportBackupJson: '{}');
   }
 
   @override
-  Future<List<MaintenanceRecord>> getMaintenanceRecords([
-    String? vehicleId,
-  ]) async {
-    return const [];
-  }
-
-  @override
-  Future<List<EnergyRecord>> getRecords([String? vehicleId]) async {
-    return const [];
-  }
-
-  @override
-  Future<List<Vehicle>> getVehicles() async {
-    return const [];
-  }
-
-  @override
-  Future<void> importBackup(BackupData data) async {}
-
-  @override
-  Future<void> validateBackup(BackupData data) async {}
-
-  @override
-  Future<void> saveMaintenanceRecord(MaintenanceRecord record) async {}
-
-  @override
-  Future<void> saveRecord(EnergyRecord record) async {}
-
-  @override
-  Future<void> saveVehicle(Vehicle vehicle) async {}
-
-  @override
-  Stream<List<MaintenanceRecord>> watchMaintenanceRecords(String vehicleId) {
-    return const Stream.empty();
-  }
-
-  @override
-  Stream<List<EnergyRecord>> watchRecords(String vehicleId) {
-    return const Stream.empty();
-  }
-
-  @override
-  Stream<List<Vehicle>> watchVehicles() {
-    return const Stream.empty();
+  Future<BackupData> parseAndValidate(String source) async {
+    return BackupCodec().decode(source);
   }
 }

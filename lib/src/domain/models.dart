@@ -232,6 +232,9 @@ class EnergyRecord {
     this.fuelUnitPrice,
     this.electricityUnitPrice,
     this.chargeMode,
+    this.machineAmount,
+    this.paidAmount,
+    this.discountAmount,
     this.note = '',
   });
 
@@ -243,8 +246,12 @@ class EnergyRecord {
     required double liters,
     required double unitPrice,
     required bool isFull,
+    double? machineAmount,
+    double? paidAmount,
+    double? discountAmount,
     String note = '',
   }) {
+    final totalCost = paidAmount ?? liters * unitPrice;
     return EnergyRecord._(
       id: id,
       vehicleId: vehicleId,
@@ -253,10 +260,13 @@ class EnergyRecord {
       energyType: EnergyType.fuel,
       amount: liters,
       unitPrice: unitPrice,
-      totalCost: liters * unitPrice,
+      totalCost: totalCost,
       isFull: isFull,
       fuelLiters: liters,
       fuelUnitPrice: unitPrice,
+      machineAmount: machineAmount,
+      paidAmount: paidAmount,
+      discountAmount: discountAmount,
       note: note,
     );
   }
@@ -333,6 +343,9 @@ class EnergyRecord {
   final double? fuelUnitPrice;
   final double? electricityUnitPrice;
   final ChargeMode? chargeMode;
+  final double? machineAmount;
+  final double? paidAmount;
+  final double? discountAmount;
   final String note;
 
   Map<String, Object?> toJson() => {
@@ -350,6 +363,9 @@ class EnergyRecord {
     'fuelUnitPrice': fuelUnitPrice,
     'electricityUnitPrice': electricityUnitPrice,
     'chargeMode': chargeMode?.name,
+    'machineAmount': machineAmount,
+    'paidAmount': paidAmount,
+    'discountAmount': discountAmount,
     'note': note,
   };
 
@@ -366,6 +382,9 @@ class EnergyRecord {
         unitPrice: (json['fuelUnitPrice'] as num? ?? json['unitPrice'] as num)
             .toDouble(),
         isFull: json['isFull'] as bool? ?? false,
+        machineAmount: (json['machineAmount'] as num?)?.toDouble(),
+        paidAmount: (json['paidAmount'] as num?)?.toDouble(),
+        discountAmount: (json['discountAmount'] as num?)?.toDouble(),
         note: json['note'] as String? ?? '',
       ),
       EnergyType.charge => EnergyRecord.charge(
@@ -414,6 +433,9 @@ class EnergyRecord {
         other.fuelUnitPrice == fuelUnitPrice &&
         other.electricityUnitPrice == electricityUnitPrice &&
         other.chargeMode == chargeMode &&
+        other.machineAmount == machineAmount &&
+        other.paidAmount == paidAmount &&
+        other.discountAmount == discountAmount &&
         other.note == note;
   }
 
@@ -433,6 +455,9 @@ class EnergyRecord {
     fuelUnitPrice,
     electricityUnitPrice,
     chargeMode,
+    machineAmount,
+    paidAmount,
+    discountAmount,
     note,
   ]);
 }

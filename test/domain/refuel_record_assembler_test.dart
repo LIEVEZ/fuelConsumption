@@ -22,6 +22,9 @@ void main() {
     expect(record.fuelLiters, 20);
     expect(record.unitPrice, 7);
     expect(record.totalCost, 140);
+    expect(record.machineAmount, 160);
+    expect(record.paidAmount, 140);
+    expect(record.discountAmount, 20);
     expect(record.note, contains('油灯亮'));
     expect(record.note, contains('机显单价 8.00 元/升'));
     expect(record.note, contains('机显金额 160.00 元'));
