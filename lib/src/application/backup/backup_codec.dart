@@ -1,7 +1,8 @@
 import 'dart:convert';
 
-import 'package:fuel_consumption/src/data/backup_schema.dart';
-import 'package:fuel_consumption/src/domain/models.dart';
+import 'package:fuel_consumption/src/application/backup/backup_data.dart';
+import 'package:fuel_consumption/src/application/backup/backup_schema.dart';
+import 'package:fuel_consumption/src/application/backup/backup_serializers.dart';
 
 class BackupCodec {
   static const currentSchemaVersion = BackupSchema.currentVersion;
@@ -10,10 +11,10 @@ class BackupCodec {
     return const JsonEncoder.withIndent('  ').convert({
       'schemaVersion': data.schemaVersion,
       'exportedAt': data.exportedAt.toIso8601String(),
-      'vehicles': data.vehicles.map((vehicle) => vehicle.toJson()).toList(),
-      'records': data.records.map((record) => record.toJson()).toList(),
+      'vehicles': data.vehicles.map(vehicleToJson).toList(),
+      'records': data.records.map(energyRecordToJson).toList(),
       'maintenanceRecords': data.maintenanceRecords
-          .map((record) => record.toJson())
+          .map(maintenanceRecordToJson)
           .toList(),
     });
   }
@@ -41,15 +42,15 @@ class BackupCodec {
         vehicles: _requiredObjectList(
           decoded,
           'vehicles',
-        ).map(Vehicle.fromJson).toList(),
+        ).map(vehicleFromJson).toList(),
         records: _requiredObjectList(
           decoded,
           'records',
-        ).map(EnergyRecord.fromJson).toList(),
+        ).map(energyRecordFromJson).toList(),
         maintenanceRecords: _optionalObjectList(
           decoded,
           'maintenanceRecords',
-        ).map(MaintenanceRecord.fromJson).toList(),
+        ).map(maintenanceRecordFromJson).toList(),
       );
     } on FormatException {
       rethrow;

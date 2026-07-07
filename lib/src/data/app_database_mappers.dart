@@ -62,26 +62,53 @@ domain.Vehicle _vehicleFromRow(VehicleRow row) {
 }
 
 domain.EnergyRecord _recordFromRow(EnergyRecordRow row) {
-  return domain.EnergyRecord.fromJson({
-    'id': row.id,
-    'vehicleId': row.vehicleId,
-    'date': row.date.toIso8601String(),
-    'odometerKm': row.odometerKm,
-    'energyType': row.energyType,
-    'amount': row.amount,
-    'unitPrice': row.unitPrice,
-    'totalCost': row.totalCost,
-    'isFull': row.isFull,
-    'fuelLiters': row.fuelLiters,
-    'kwh': row.kwh,
-    'fuelUnitPrice': row.fuelUnitPrice,
-    'electricityUnitPrice': row.electricityUnitPrice,
-    'chargeMode': row.chargeMode,
-    'machineAmount': row.machineAmount,
-    'paidAmount': row.paidAmount,
-    'discountAmount': row.discountAmount,
-    'note': row.note,
-  });
+  final type = domain.EnergyType.fromName(row.energyType);
+  return switch (type) {
+    domain.EnergyType.fuel => _fuelRecordFromRow(row),
+    domain.EnergyType.charge => domain.EnergyRecord.charge(
+      id: row.id,
+      vehicleId: row.vehicleId,
+      date: row.date,
+      odometerKm: row.odometerKm,
+      kwh: row.kwh ?? row.amount,
+      unitPrice: row.electricityUnitPrice ?? row.unitPrice,
+      chargeMode: domain.ChargeMode.fromName(
+        row.chargeMode ?? domain.ChargeMode.slow.name,
+      ),
+      note: row.note,
+    ),
+    domain.EnergyType.hybrid => domain.EnergyRecord.hybrid(
+      id: row.id,
+      vehicleId: row.vehicleId,
+      date: row.date,
+      odometerKm: row.odometerKm,
+      liters: row.fuelLiters ?? 0,
+      fuelUnitPrice: row.fuelUnitPrice ?? 0,
+      kwh: row.kwh ?? 0,
+      electricityUnitPrice: row.electricityUnitPrice ?? 0,
+      note: row.note,
+    ),
+  };
+}
+
+domain.EnergyRecord _fuelRecordFromRow(EnergyRecordRow row) {
+  final legacyRefuelAmounts = LegacyRefuelNoteParser.parse(
+    row.note,
+    paidAmountFallback: row.totalCost,
+  );
+  return domain.EnergyRecord.fuel(
+    id: row.id,
+    vehicleId: row.vehicleId,
+    date: row.date,
+    odometerKm: row.odometerKm,
+    liters: row.fuelLiters ?? row.amount,
+    unitPrice: row.fuelUnitPrice ?? row.unitPrice,
+    isFull: row.isFull,
+    machineAmount: row.machineAmount ?? legacyRefuelAmounts.machineAmount,
+    paidAmount: row.paidAmount ?? legacyRefuelAmounts.paidAmount,
+    discountAmount: row.discountAmount ?? legacyRefuelAmounts.discountAmount,
+    note: row.note,
+  );
 }
 
 domain.MaintenanceRecord _maintenanceRecordFromRow(MaintenanceRecordRow row) {

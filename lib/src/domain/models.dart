@@ -112,28 +112,6 @@ class Vehicle {
     );
   }
 
-  Map<String, Object?> toJson() => {
-    'id': id,
-    'name': name,
-    'type': type.name,
-    'initialOdometerKm': initialOdometerKm,
-    'model': model,
-    'isDefault': isDefault,
-    'archived': archived,
-  };
-
-  factory Vehicle.fromJson(Map<String, Object?> json) {
-    return Vehicle(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      type: VehicleType.fromName(json['type'] as String),
-      initialOdometerKm: (json['initialOdometerKm'] as num).toDouble(),
-      model: json['model'] as String? ?? '',
-      isDefault: json['isDefault'] as bool? ?? false,
-      archived: json['archived'] as bool? ?? false,
-    );
-  }
-
   @override
   bool operator ==(Object other) {
     return other is Vehicle &&
@@ -176,28 +154,6 @@ class MaintenanceRecord {
   final double cost;
   final String shop;
   final String note;
-
-  Map<String, Object?> toJson() => {
-    'id': id,
-    'vehicleId': vehicleId,
-    'date': date.toIso8601String(),
-    'category': category.name,
-    'cost': cost,
-    'shop': shop,
-    'note': note,
-  };
-
-  factory MaintenanceRecord.fromJson(Map<String, Object?> json) {
-    return MaintenanceRecord(
-      id: json['id'] as String,
-      vehicleId: json['vehicleId'] as String,
-      date: DateTime.parse(json['date'] as String),
-      category: MaintenanceCategory.fromName(json['category'] as String),
-      cost: (json['cost'] as num).toDouble(),
-      shop: json['shop'] as String? ?? '',
-      note: json['note'] as String? ?? '',
-    );
-  }
 
   @override
   bool operator ==(Object other) {
@@ -348,74 +304,6 @@ class EnergyRecord {
   final double? discountAmount;
   final String note;
 
-  Map<String, Object?> toJson() => {
-    'id': id,
-    'vehicleId': vehicleId,
-    'date': date.toIso8601String(),
-    'odometerKm': odometerKm,
-    'energyType': energyType.name,
-    'amount': amount,
-    'unitPrice': unitPrice,
-    'totalCost': totalCost,
-    'isFull': isFull,
-    'fuelLiters': fuelLiters,
-    'kwh': kwh,
-    'fuelUnitPrice': fuelUnitPrice,
-    'electricityUnitPrice': electricityUnitPrice,
-    'chargeMode': chargeMode?.name,
-    'machineAmount': machineAmount,
-    'paidAmount': paidAmount,
-    'discountAmount': discountAmount,
-    'note': note,
-  };
-
-  factory EnergyRecord.fromJson(Map<String, Object?> json) {
-    final type = EnergyType.fromName(json['energyType'] as String);
-    return switch (type) {
-      EnergyType.fuel => EnergyRecord.fuel(
-        id: json['id'] as String,
-        vehicleId: json['vehicleId'] as String,
-        date: DateTime.parse(json['date'] as String),
-        odometerKm: (json['odometerKm'] as num).toDouble(),
-        liters: (json['fuelLiters'] as num? ?? json['amount'] as num)
-            .toDouble(),
-        unitPrice: (json['fuelUnitPrice'] as num? ?? json['unitPrice'] as num)
-            .toDouble(),
-        isFull: json['isFull'] as bool? ?? false,
-        machineAmount: (json['machineAmount'] as num?)?.toDouble(),
-        paidAmount: (json['paidAmount'] as num?)?.toDouble(),
-        discountAmount: (json['discountAmount'] as num?)?.toDouble(),
-        note: json['note'] as String? ?? '',
-      ),
-      EnergyType.charge => EnergyRecord.charge(
-        id: json['id'] as String,
-        vehicleId: json['vehicleId'] as String,
-        date: DateTime.parse(json['date'] as String),
-        odometerKm: (json['odometerKm'] as num).toDouble(),
-        kwh: (json['kwh'] as num? ?? json['amount'] as num).toDouble(),
-        unitPrice:
-            (json['electricityUnitPrice'] as num? ?? json['unitPrice'] as num)
-                .toDouble(),
-        chargeMode: ChargeMode.fromName(
-          json['chargeMode'] as String? ?? ChargeMode.slow.name,
-        ),
-        note: json['note'] as String? ?? '',
-      ),
-      EnergyType.hybrid => EnergyRecord.hybrid(
-        id: json['id'] as String,
-        vehicleId: json['vehicleId'] as String,
-        date: DateTime.parse(json['date'] as String),
-        odometerKm: (json['odometerKm'] as num).toDouble(),
-        liters: (json['fuelLiters'] as num? ?? 0).toDouble(),
-        fuelUnitPrice: (json['fuelUnitPrice'] as num? ?? 0).toDouble(),
-        kwh: (json['kwh'] as num? ?? 0).toDouble(),
-        electricityUnitPrice: (json['electricityUnitPrice'] as num? ?? 0)
-            .toDouble(),
-        note: json['note'] as String? ?? '',
-      ),
-    };
-  }
-
   @override
   bool operator ==(Object other) {
     return other is EnergyRecord &&
@@ -476,20 +364,4 @@ class StatisticsSnapshot {
   final double totalCost;
   final double costPerKm;
   final double totalDistanceKm;
-}
-
-class BackupData {
-  const BackupData({
-    required this.schemaVersion,
-    required this.exportedAt,
-    required this.vehicles,
-    required this.records,
-    this.maintenanceRecords = const [],
-  });
-
-  final int schemaVersion;
-  final DateTime exportedAt;
-  final List<Vehicle> vehicles;
-  final List<EnergyRecord> records;
-  final List<MaintenanceRecord> maintenanceRecords;
 }

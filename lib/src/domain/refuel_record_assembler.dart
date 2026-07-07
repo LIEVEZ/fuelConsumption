@@ -83,11 +83,6 @@ class RefuelRecordAssembler {
 
     final note = [
       if (draft.warningLightOn) '油灯亮',
-      if (inputUnitPrice != null)
-        '机显单价 ${inputUnitPrice.toStringAsFixed(2)} 元/升',
-      if (machineAmount > 0) '机显金额 ${machineAmount.toStringAsFixed(2)} 元',
-      if (inputDiscount > 0) '优惠 ${inputDiscount.toStringAsFixed(2)} 元',
-      if (paidAmount > 0) '实付金额 ${paidAmount.toStringAsFixed(2)} 元',
       draft.fuelGrade,
       draft.noteText.trim(),
     ].where((item) => item.isNotEmpty).join(' · ');

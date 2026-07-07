@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fuel_consumption/src/application/backup/backup_codec.dart';
+import 'package:fuel_consumption/src/application/backup/backup_data.dart';
 import 'package:fuel_consumption/src/application/backup_import_service.dart';
-import 'package:fuel_consumption/src/data/backup_codec.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 import 'package:fuel_consumption/src/widgets/dialogs/import_dialog.dart';
 

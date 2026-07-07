@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fuel_consumption/src/application/backup_import_service.dart';
+import 'package:fuel_consumption/src/application/dashboard_commands.dart';
 import 'package:fuel_consumption/src/application/dashboard_query.dart';
-import 'package:fuel_consumption/src/application/vehicle_commands.dart';
-import 'package:fuel_consumption/src/data/app_repository.dart';
-import 'package:fuel_consumption/src/data/backup_codec.dart';
-import 'package:fuel_consumption/src/data/repository_provider.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
+import 'package:fuel_consumption/src/presentation/app_providers.dart';
+import 'package:fuel_consumption/src/presentation/dashboard_navigation.dart';
 import 'package:fuel_consumption/src/screens/dashboard_controller.dart';
+import 'package:fuel_consumption/src/screens/dashboard_dialogs.dart';
 import 'package:fuel_consumption/src/screens/consumption_screen.dart';
+import 'package:fuel_consumption/src/screens/energy_record_screen.dart';
 import 'package:fuel_consumption/src/screens/expense_screen.dart';
 import 'package:fuel_consumption/src/screens/maintenance_screen.dart';
 import 'package:fuel_consumption/src/screens/mine_screen.dart';
-import 'package:fuel_consumption/src/screens/refuel_screen.dart';
 import 'package:fuel_consumption/src/widgets/app_bottom_nav.dart';
-import 'package:fuel_consumption/src/widgets/create_record_sheet.dart';
 import 'package:fuel_consumption/src/widgets/dashboard/dashboard_states.dart';
-import 'package:fuel_consumption/src/widgets/dialogs/import_dialog.dart';
-import 'package:fuel_consumption/src/widgets/dialogs/text_payload_dialog.dart';
-import 'package:fuel_consumption/src/widgets/dialogs/vehicle_dialog.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -52,7 +47,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.watch(repositoryProvider);
+    final commands = ref.watch(dashboardCommandProvider);
     final dashboardState = ref.watch(
       dashboardQueryProvider(_controller.selectedVehicleId),
     );
@@ -61,7 +56,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         context: context,
         vehicles: dashboardState.vehicles,
         selectedVehicle: dashboardState.selectedVehicle,
-        child: _tabBody(dashboardState.data!, repository),
+        child: _tabBody(dashboardState.data!, commands),
       ),
       DashboardLoadStatus.empty => _buildScaffold(
         context: context,
@@ -92,7 +87,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_controller.title),
+        title: Text(_pageTitle(selectedVehicle)),
         leading: _controller.selectedTab == DashboardTab.mine
             ? IconButton(
                 tooltip: '返回油耗',
@@ -105,12 +100,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       bottomNavigationBar: AppBottomNav(
         selectedTab: _controller.selectedTab,
         onSelected: _controller.selectTab,
-        onCreateTap: _showCreateMenu,
+        onCreateTap: () => _showCreateMenu(selectedVehicle?.type),
       ),
     );
   }
 
-  Widget _tabBody(DashboardData data, AppRepository repository) {
+  Widget _tabBody(DashboardData data, DashboardCommandService commands) {
     return switch (_controller.selectedPage) {
       DashboardPage.consumption => ConsumptionScreen(
         vehicle: data.selectedVehicle,
@@ -124,15 +119,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         records: data.records,
         maintenanceRecords: data.maintenanceRecords,
       ),
-      DashboardPage.refuel => RefuelScreen(
+      DashboardPage.energy => EnergyRecordScreen(
         vehicle: data.selectedVehicle,
         records: data.chronologicalRecords,
-        onSave: repository.saveRecord,
+        onSaveRefuel: commands.saveRefuelRecord,
+        onSaveCharge: commands.saveChargeRecord,
+        onSaveHybrid: commands.saveHybridRecord,
         onSaved: _controller.goHome,
       ),
       DashboardPage.maintenance => MaintenanceScreen(
         vehicle: data.selectedVehicle,
-        onSave: repository.saveMaintenanceRecord,
+        onSave: commands.saveMaintenanceRecord,
         onSaved: _controller.goToExpense,
       ),
       DashboardPage.mine => MineScreen(
@@ -144,6 +141,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         onExport: _exportJson,
         onImport: _importJson,
       ),
+    };
+  }
+
+  String _pageTitle(Vehicle? selectedVehicle) {
+    if (_controller.selectedPage != DashboardPage.energy) {
+      return _controller.title;
+    }
+    return switch (selectedVehicle?.type) {
+      VehicleType.electric => '充电',
+      VehicleType.hybrid => '油电补能',
+      VehicleType.fuel || VehicleType.motorcycle => '优惠加油',
+      null => '补能',
     };
   }
 
@@ -187,48 +196,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Future<void> _showCreateMenu() async {
-    final action = await showModalBottomSheet<CreateRecordAction>(
+  Future<void> _showCreateMenu(VehicleType? vehicleType) async {
+    final action = await showDashboardCreateMenu(
       context: context,
-      showDragHandle: true,
-      builder: (context) => const CreateRecordSheet(),
+      vehicleType: vehicleType,
     );
     if (!mounted || action == null) return;
     _controller.selectCreateAction(action);
   }
 
   Future<void> _showVehicleDialog() async {
-    final repository = ref.read(repositoryProvider);
-    final vehicleCommands = VehicleCommandService(repository: repository);
-    await showModalBottomSheet<void>(
+    final commands = ref.read(dashboardCommandProvider);
+    await showDashboardVehicleDialog(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) =>
-          VehicleDialog(onSave: vehicleCommands.createVehicle),
+      onSave: commands.createVehicle,
     );
   }
 
   Future<void> _confirmDeleteVehicle(Vehicle vehicle) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await confirmDashboardVehicleDelete(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除车辆'),
-        content: Text('确定删除「${vehicle.name}」吗？该车辆的补能记录也会一起删除。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton.tonal(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+      vehicle: vehicle,
     );
-    if (!mounted || confirmed != true) return;
-    await ref.read(repositoryProvider).deleteVehicle(vehicle.id);
+    if (!mounted || !confirmed) return;
+    await ref.read(dashboardCommandProvider).deleteVehicle(vehicle.id);
     if (!mounted) return;
     _controller.clearSelectedVehicleIfDeleted(vehicle.id);
     ScaffoldMessenger.of(
@@ -237,27 +228,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _exportJson() async {
-    final backup = await ref.read(repositoryProvider).exportBackup();
-    final json = BackupCodec().encode(backup);
+    final json = await ref.read(dashboardCommandProvider).exportBackupJson();
     if (!mounted) return;
-    await showDialog<void>(
+    await showDashboardTextPayload(
       context: context,
-      builder: (context) => TextPayloadDialog(title: 'JSON 备份', text: json),
+      title: 'JSON 备份',
+      text: json,
     );
   }
 
   Future<void> _importJson() async {
-    final result = await showDialog<ImportBackupResult>(
+    final result = await showDashboardImportDialog(
       context: context,
-      builder: (context) => ImportDialog(
-        actions: BackupImportService(repository: ref.read(repositoryProvider)),
-      ),
+      actions: ref.read(dashboardCommandProvider).importActions,
     );
     if (!mounted || result == null) return;
-    await showDialog<void>(
+    await showDashboardTextPayload(
       context: context,
-      builder: (context) =>
-          TextPayloadDialog(title: '导入前自动备份', text: result.preImportBackupJson),
+      title: '导入前自动备份',
+      text: result.preImportBackupJson,
     );
   }
 }

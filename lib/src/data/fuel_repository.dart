@@ -1,6 +1,7 @@
+import 'package:fuel_consumption/src/application/backup/backup_data.dart';
+import 'package:fuel_consumption/src/application/backup/backup_schema.dart';
 import 'package:fuel_consumption/src/data/app_database.dart';
-import 'package:fuel_consumption/src/data/app_repository.dart';
-import 'package:fuel_consumption/src/data/backup_schema.dart';
+import 'package:fuel_consumption/src/application/ports/app_repository.dart';
 import 'package:fuel_consumption/src/data/backup_validator.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 import 'package:fuel_consumption/src/domain/validation.dart';

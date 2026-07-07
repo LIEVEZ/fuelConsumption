@@ -3,7 +3,7 @@ import 'package:fuel_consumption/src/domain/fuel_grades.dart';
 import 'package:fuel_consumption/src/domain/refuel_record_assembler.dart';
 
 void main() {
-  test('builds fuel record with paid amount unit price and note protocol', () {
+  test('builds fuel record with structured paid amount values', () {
     final result = RefuelRecordAssembler.assemble(
       _draft(
         unitPriceText: '8',
@@ -26,12 +26,12 @@ void main() {
     expect(record.paidAmount, 140);
     expect(record.discountAmount, 20);
     expect(record.note, contains('油灯亮'));
-    expect(record.note, contains('机显单价 8.00 元/升'));
-    expect(record.note, contains('机显金额 160.00 元'));
-    expect(record.note, contains('优惠 20.00 元'));
-    expect(record.note, contains('实付金额 140.00 元'));
     expect(record.note, contains(defaultFuelGrade));
     expect(record.note, contains('周末加油'));
+    expect(record.note, isNot(contains('机显单价')));
+    expect(record.note, isNot(contains('机显金额')));
+    expect(record.note, isNot(contains('优惠')));
+    expect(record.note, isNot(contains('实付金额')));
   });
 
   test('reports missing odometer', () {

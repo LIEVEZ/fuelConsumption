@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:fuel_consumption/src/data/app_database_connection.dart';
+import 'package:fuel_consumption/src/domain/legacy_refuel_note_parser.dart';
 import 'package:fuel_consumption/src/domain/models.dart' as domain;
 
 part 'app_database.g.dart';
@@ -16,6 +17,8 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openDatabaseConnection());
 
   AppDatabase.inMemory() : super(openInMemoryDatabaseConnection());
+
+  AppDatabase.withExecutor(super.e);
 
   @override
   int get schemaVersion => 4;

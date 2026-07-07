@@ -1,6 +1,6 @@
-import 'package:fuel_consumption/src/data/app_repository.dart';
-import 'package:fuel_consumption/src/data/backup_codec.dart';
-import 'package:fuel_consumption/src/domain/models.dart';
+import 'package:fuel_consumption/src/application/backup/backup_codec.dart';
+import 'package:fuel_consumption/src/application/backup/backup_data.dart';
+import 'package:fuel_consumption/src/application/ports/app_repository.dart';
 
 abstract class ImportDialogActions {
   Future<BackupData> parseAndValidate(String source);

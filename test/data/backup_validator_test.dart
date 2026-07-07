@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fuel_consumption/src/data/backup_schema.dart';
+import 'package:fuel_consumption/src/application/backup/backup_data.dart';
+import 'package:fuel_consumption/src/application/backup/backup_schema.dart';
 import 'package:fuel_consumption/src/data/backup_validator.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 
@@ -60,9 +61,24 @@ void main() {
     expect(
       () => validator.validate(
         _backup(
+          vehicles: [
+            _vehicle(),
+            _vehicle(
+              id: 'vehicle-electric',
+              name: '电车',
+              type: VehicleType.electric,
+            ),
+            _vehicle(
+              id: 'vehicle-hybrid',
+              name: '插混',
+              type: VehicleType.hybrid,
+            ),
+          ],
           records: [
             _fuelRecord(id: 'record-1', odometerKm: 100),
             _fuelRecord(id: 'record-2', odometerKm: 200),
+            _chargeRecord(),
+            _hybridRecord(),
           ],
           maintenanceRecords: [
             MaintenanceRecord(
@@ -76,6 +92,54 @@ void main() {
         ),
       ),
       returnsNormally,
+    );
+  });
+
+  test('rejects invalid charge records', () {
+    expect(
+      () => validator.validate(
+        _backup(
+          vehicles: [
+            _vehicle(
+              id: 'vehicle-electric',
+              name: '电车',
+              type: VehicleType.electric,
+            ),
+          ],
+          records: [_chargeRecord(kwh: 0)],
+        ),
+      ),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('记录 charge-1 无效: 能源数量必须大于 0'),
+        ),
+      ),
+    );
+  });
+
+  test('rejects invalid hybrid records', () {
+    expect(
+      () => validator.validate(
+        _backup(
+          vehicles: [
+            _vehicle(
+              id: 'vehicle-hybrid',
+              name: '插混',
+              type: VehicleType.hybrid,
+            ),
+          ],
+          records: [_hybridRecord(liters: 0, kwh: 0)],
+        ),
+      ),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('记录 hybrid-1 无效: 能源数量必须大于 0'),
+        ),
+      ),
     );
   });
 }
@@ -94,13 +158,12 @@ BackupData _backup({
   );
 }
 
-Vehicle _vehicle() {
-  return const Vehicle(
-    id: 'vehicle-1',
-    name: '测试车',
-    type: VehicleType.fuel,
-    initialOdometerKm: 0,
-  );
+Vehicle _vehicle({
+  String id = 'vehicle-1',
+  String name = '测试车',
+  VehicleType type = VehicleType.fuel,
+}) {
+  return Vehicle(id: id, name: name, type: type, initialOdometerKm: 0);
 }
 
 EnergyRecord _fuelRecord({
@@ -116,5 +179,30 @@ EnergyRecord _fuelRecord({
     liters: 10,
     unitPrice: 7,
     isFull: true,
+  );
+}
+
+EnergyRecord _chargeRecord({double kwh = 40}) {
+  return EnergyRecord.charge(
+    id: 'charge-1',
+    vehicleId: 'vehicle-electric',
+    date: DateTime(2026, 7, 1),
+    odometerKm: 100,
+    kwh: kwh,
+    unitPrice: 0.6,
+    chargeMode: ChargeMode.fast,
+  );
+}
+
+EnergyRecord _hybridRecord({double liters = 18, double kwh = 12}) {
+  return EnergyRecord.hybrid(
+    id: 'hybrid-1',
+    vehicleId: 'vehicle-hybrid',
+    date: DateTime(2026, 7, 1),
+    odometerKm: 100,
+    liters: liters,
+    fuelUnitPrice: 7.5,
+    kwh: kwh,
+    electricityUnitPrice: 0.6,
   );
 }

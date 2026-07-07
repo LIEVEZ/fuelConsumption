@@ -52,6 +52,7 @@ class RefuelInputRow extends StatelessWidget {
     required this.label,
     required this.controller,
     this.suffix,
+    this.keyboardType = const TextInputType.numberWithOptions(decimal: true),
     this.required = false,
     super.key,
   });
@@ -59,6 +60,7 @@ class RefuelInputRow extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final String? suffix;
+  final TextInputType keyboardType;
   final bool required;
 
   @override
@@ -75,9 +77,7 @@ class RefuelInputRow extends StatelessWidget {
             child: TextField(
               controller: controller,
               textAlign: TextAlign.end,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: keyboardType,
               decoration: InputDecoration(suffixText: suffix),
             ),
           ),

@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fuel_consumption/src/presentation/dashboard_navigation.dart';
 import 'package:fuel_consumption/src/screens/dashboard_controller.dart';
-import 'package:fuel_consumption/src/widgets/app_bottom_nav.dart';
-import 'package:fuel_consumption/src/widgets/create_record_sheet.dart';
 
 void main() {
   test('maps tabs and create actions to dashboard pages', () {
@@ -16,10 +15,19 @@ void main() {
     expect(controller.selectedPage, DashboardPage.expense);
     expect(controller.title, '费用');
 
+    controller.selectTab(DashboardTab.energy);
+    expect(controller.selectedPage, DashboardPage.energy);
+    expect(controller.selectedTab, DashboardTab.energy);
+    expect(controller.title, '补能');
+
     controller.selectCreateAction(CreateRecordAction.maintenance);
     expect(controller.selectedPage, DashboardPage.maintenance);
     expect(controller.selectedTab, isNull);
     expect(controller.title, '保养');
+
+    controller.selectCreateAction(CreateRecordAction.energy);
+    expect(controller.selectedPage, DashboardPage.energy);
+    expect(controller.selectedTab, DashboardTab.energy);
 
     controller.goHome();
     expect(controller.selectedPage, DashboardPage.consumption);

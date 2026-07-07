@@ -63,12 +63,16 @@ class _EnergyExpenseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final paymentSummary = fuelPaymentSummary(record);
     return _ExpenseTileLayout(
       icon: energyIcon(record.energyType),
       iconColor: energyColor(record.energyType),
       title: record.energyType.label,
-      subtitle:
-          '${shortDate(record.date)} ${shortTime(record.date)} · ${recordSubtitle(record)}',
+      subtitle: [
+        '${shortDate(record.date)} ${shortTime(record.date)}',
+        recordSubtitle(record),
+        ?paymentSummary,
+      ].join(' · '),
       amount: record.totalCost,
     );
   }
@@ -87,7 +91,7 @@ class _MaintenanceExpenseTile extends StatelessWidget {
       if (record.note.isNotEmpty) record.note,
     ].join(' · ');
     return _ExpenseTileLayout(
-      icon: _maintenanceIcon(record.category),
+      icon: maintenanceIcon(record.category),
       iconColor: AppColors.maintenance,
       title: '维修保养 · ${record.category.label}',
       subtitle: subtitle,
@@ -157,16 +161,4 @@ class _ExpenseTileLayout extends StatelessWidget {
       ),
     );
   }
-}
-
-IconData _maintenanceIcon(MaintenanceCategory category) {
-  return switch (category) {
-    MaintenanceCategory.regular => Icons.build_circle_outlined,
-    MaintenanceCategory.oil => Icons.oil_barrel_outlined,
-    MaintenanceCategory.tire => Icons.album_outlined,
-    MaintenanceCategory.repair => Icons.handyman_outlined,
-    MaintenanceCategory.wash => Icons.local_car_wash_outlined,
-    MaintenanceCategory.insurance => Icons.verified_user_outlined,
-    MaintenanceCategory.other => Icons.more_horiz,
-  };
 }

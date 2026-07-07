@@ -1,8 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:fuel_consumption/src/widgets/app_bottom_nav.dart';
-import 'package:fuel_consumption/src/widgets/create_record_sheet.dart';
-
-enum DashboardPage { consumption, expense, refuel, maintenance, mine }
+import 'package:fuel_consumption/src/presentation/dashboard_navigation.dart';
 
 class DashboardController extends ChangeNotifier {
   DashboardPage _selectedPage = DashboardPage.consumption;
@@ -14,7 +11,7 @@ class DashboardController extends ChangeNotifier {
   DashboardTab? get selectedTab => switch (_selectedPage) {
     DashboardPage.consumption => DashboardTab.consumption,
     DashboardPage.expense => DashboardTab.expense,
-    DashboardPage.refuel => DashboardTab.refuel,
+    DashboardPage.energy => DashboardTab.energy,
     DashboardPage.maintenance => null,
     DashboardPage.mine => DashboardTab.mine,
   };
@@ -22,7 +19,7 @@ class DashboardController extends ChangeNotifier {
   String get title => switch (_selectedPage) {
     DashboardPage.consumption => '油耗',
     DashboardPage.expense => '费用',
-    DashboardPage.refuel => '优惠加油',
+    DashboardPage.energy => '补能',
     DashboardPage.maintenance => '保养',
     DashboardPage.mine => '我的中心',
   };
@@ -33,7 +30,7 @@ class DashboardController extends ChangeNotifier {
 
   void selectCreateAction(CreateRecordAction action) {
     _setPage(switch (action) {
-      CreateRecordAction.refuel => DashboardPage.refuel,
+      CreateRecordAction.energy => DashboardPage.energy,
       CreateRecordAction.maintenance => DashboardPage.maintenance,
     });
   }
@@ -63,13 +60,4 @@ class DashboardController extends ChangeNotifier {
     _selectedPage = page;
     notifyListeners();
   }
-}
-
-extension DashboardTabPage on DashboardTab {
-  DashboardPage get page => switch (this) {
-    DashboardTab.consumption => DashboardPage.consumption,
-    DashboardTab.expense => DashboardPage.expense,
-    DashboardTab.refuel => DashboardPage.refuel,
-    DashboardTab.mine => DashboardPage.mine,
-  };
 }

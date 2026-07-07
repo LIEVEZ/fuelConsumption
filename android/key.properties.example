@@ -1,0 +1,4 @@
+storePassword=change-me
+keyPassword=change-me
+keyAlias=fuel-consumption
+storeFile=../release-keystore.jks

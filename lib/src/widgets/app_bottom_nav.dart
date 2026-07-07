@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fuel_consumption/src/presentation/dashboard_navigation.dart';
 import 'package:fuel_consumption/src/theme/app_colors.dart';
-
-enum DashboardTab { consumption, expense, refuel, mine }
 
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
@@ -45,11 +44,11 @@ class AppBottomNav extends StatelessWidget {
               ),
               _CenterAction(onTap: onCreateTap),
               _NavItem(
-                icon: Icons.local_gas_station_outlined,
-                selectedIcon: Icons.local_gas_station,
-                label: '优惠加油',
-                selected: selectedTab == DashboardTab.refuel,
-                onTap: () => onSelected(DashboardTab.refuel),
+                icon: Icons.ev_station_outlined,
+                selectedIcon: Icons.ev_station,
+                label: '补能',
+                selected: selectedTab == DashboardTab.energy,
+                onTap: () => onSelected(DashboardTab.energy),
               ),
               _NavItem(
                 icon: Icons.person_outline,

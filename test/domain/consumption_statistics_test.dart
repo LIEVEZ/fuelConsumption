@@ -73,6 +73,34 @@ void main() {
     expect(costs.map((cost) => cost.cost), [20, 30, 40, 50, 60, 70]);
   });
 
+  test('monthly cost buckets include charge and hybrid records', () {
+    final costs = ConsumptionStatistics.monthlyFuelCosts([
+      EnergyRecord.charge(
+        id: 'charge-1',
+        vehicleId: 'vehicle-1',
+        date: DateTime(2026, 7),
+        odometerKm: 100,
+        kwh: 40,
+        unitPrice: 0.6,
+        chargeMode: ChargeMode.fast,
+      ),
+      EnergyRecord.hybrid(
+        id: 'hybrid-1',
+        vehicleId: 'vehicle-1',
+        date: DateTime(2026, 7, 2),
+        odometerKm: 200,
+        liters: 18,
+        fuelUnitPrice: 7.5,
+        kwh: 12,
+        electricityUnitPrice: 0.6,
+      ),
+    ]);
+
+    expect(costs, hasLength(1));
+    expect(costs.single.month, 7);
+    expect(costs.single.cost, closeTo(166.2, 0.001));
+  });
+
   test('averages annual consumption by valid odometer segments', () {
     final annual = ConsumptionStatistics.annualConsumptionComparisons([
       _fuelRecord(id: 'energy-1', date: DateTime(2025, 12), odometerKm: 100),

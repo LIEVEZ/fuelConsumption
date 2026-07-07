@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fuel_consumption/src/application/backup/backup_data.dart';
 import 'package:fuel_consumption/src/application/backup_import_service.dart';
-import 'package:fuel_consumption/src/domain/models.dart';
 
 class ImportDialog extends StatefulWidget {
   const ImportDialog({required this.actions, super.key});

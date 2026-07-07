@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fuel_consumption/src/application/record_commands.dart';
 import 'package:fuel_consumption/src/domain/fuel_grades.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
-import 'package:fuel_consumption/src/domain/refuel_record_assembler.dart';
-import 'package:fuel_consumption/src/domain/validation.dart';
 import 'package:fuel_consumption/src/screens/refuel_form_controller.dart';
 import 'package:fuel_consumption/src/theme/app_colors.dart';
 import 'package:fuel_consumption/src/utils/energy_ui.dart';
 import 'package:fuel_consumption/src/widgets/refuel/refuel_form_widgets.dart';
-import 'package:uuid/uuid.dart';
 
 class RefuelScreen extends StatefulWidget {
   const RefuelScreen({
@@ -20,7 +18,7 @@ class RefuelScreen extends StatefulWidget {
 
   final Vehicle vehicle;
   final List<EnergyRecord> records;
-  final Future<void> Function(EnergyRecord record) onSave;
+  final Future<EnergyRecord> Function(RefuelRecordInput input) onSave;
   final VoidCallback onSaved;
 
   @override
@@ -281,38 +279,36 @@ class _RefuelScreenState extends State<RefuelScreen> {
   }
 
   Future<void> _save() async {
-    final assembly = RefuelRecordAssembler.assemble(
-      _form.buildDraft(
-        id: const Uuid().v4(),
-        vehicleId: widget.vehicle.id,
-        date: _date,
-        isFull: _isFull,
-        warningLightOn: _warningLightOn,
-        fuelGrade: _fuelGrade,
-      ),
-    );
-    if (!assembly.isSuccess) {
-      setState(() => _error = assembly.error);
-      return;
-    }
-    final record = assembly.record!;
-    final validation = RecordValidator().validate(record, widget.records);
-    if (!validation.isValid) {
-      setState(() => _error = validation.message);
-      return;
-    }
-
     setState(() {
       _saving = true;
       _error = null;
     });
     try {
-      await widget.onSave(record);
+      await widget.onSave(
+        RefuelRecordInput(
+          vehicleId: widget.vehicle.id,
+          date: _date,
+          odometerText: _form.odometerController.text,
+          unitPriceText: _form.unitPriceController.text,
+          litersText: _form.litersController.text,
+          machineAmountText: _form.machineAmountController.text,
+          paidUnitPriceText: _form.paidUnitPriceController.text,
+          discountText: _form.discountController.text,
+          paidAmountText: _form.paidAmountController.text,
+          isFull: _isFull,
+          warningLightOn: _warningLightOn,
+          fuelGrade: _fuelGrade,
+          noteText: _form.noteController.text,
+        ),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('已保存加油记录')));
       widget.onSaved();
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message);
     } on Object catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());

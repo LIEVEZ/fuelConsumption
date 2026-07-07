@@ -1,4 +1,4 @@
-import 'package:fuel_consumption/src/data/app_repository.dart';
+import 'package:fuel_consumption/src/application/ports/app_repository.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 import 'package:uuid/uuid.dart';
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fuel_consumption/src/application/record_commands.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 import 'package:fuel_consumption/src/screens/refuel_screen.dart';
 
@@ -13,7 +14,7 @@ void main() {
           body: RefuelScreen(
             vehicle: _vehicle(),
             records: [_record(id: 'record-1', odometerKm: 12345)],
-            onSave: (_) async {},
+            onSave: (_) async => _record(),
             onSaved: () {},
           ),
         ),
@@ -29,7 +30,7 @@ void main() {
   testWidgets('saves a valid fuel record with the paid amount values', (
     tester,
   ) async {
-    EnergyRecord? savedRecord;
+    RefuelRecordInput? savedInput;
     var onSavedCalled = false;
 
     await tester.pumpWidget(
@@ -38,7 +39,10 @@ void main() {
           body: RefuelScreen(
             vehicle: _vehicle(),
             records: [_record(odometerKm: 12000)],
-            onSave: (record) async => savedRecord = record,
+            onSave: (input) async {
+              savedInput = input;
+              return _record(odometerKm: 12100);
+            },
             onSaved: () => onSavedCalled = true,
           ),
         ),
@@ -50,20 +54,21 @@ void main() {
     await _tapSave(tester);
     await tester.pumpAndSettle();
 
-    expect(savedRecord, isNotNull);
-    expect(savedRecord!.vehicleId, 'vehicle-1');
-    expect(savedRecord!.odometerKm, 12100);
-    expect(savedRecord!.fuelLiters, 20);
-    expect(savedRecord!.unitPrice, 7);
-    expect(savedRecord!.totalCost, 140);
-    expect(savedRecord!.note, contains('油灯亮'));
-    expect(savedRecord!.note, contains('92#汽油'));
+    expect(savedInput, isNotNull);
+    expect(savedInput!.vehicleId, 'vehicle-1');
+    expect(savedInput!.odometerText, '12100');
+    expect(savedInput!.unitPriceText, '8.00');
+    expect(savedInput!.litersText, '20');
+    expect(savedInput!.machineAmountText, '160.00');
+    expect(savedInput!.paidUnitPriceText, '7.00');
+    expect(savedInput!.discountText, '20');
+    expect(savedInput!.paidAmountText, '140.00');
+    expect(savedInput!.warningLightOn, isTrue);
+    expect(savedInput!.fuelGrade, '92#汽油');
     expect(onSavedCalled, isTrue);
   });
 
-  testWidgets('shows validation error and skips save for invalid odometer', (
-    tester,
-  ) async {
+  testWidgets('shows validation error from command layer', (tester) async {
     var saveCalled = false;
     var onSavedCalled = false;
 
@@ -73,7 +78,10 @@ void main() {
           body: RefuelScreen(
             vehicle: _vehicle(),
             records: [_record(odometerKm: 12000)],
-            onSave: (_) async => saveCalled = true,
+            onSave: (_) async {
+              saveCalled = true;
+              throw const FormatException('里程必须大于上一条记录');
+            },
             onSaved: () => onSavedCalled = true,
           ),
         ),
@@ -85,7 +93,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('里程必须大于上一条记录'), findsOneWidget);
-    expect(saveCalled, isFalse);
+    expect(saveCalled, isTrue);
     expect(onSavedCalled, isFalse);
   });
 }

@@ -51,6 +51,7 @@ extension AppDatabaseMigrations on AppDatabase {
             'energy_record_rows',
             energyRecordRows.discountAmount,
           );
+          await _backfillLegacyRefuelAmountColumns();
         }
       },
       beforeOpen: (details) async {
@@ -75,5 +76,51 @@ extension AppDatabaseMigrations on AppDatabase {
       'energy_record_rows' => energyRecordRows,
       _ => throw ArgumentError.value(tableName, 'tableName'),
     }, column);
+  }
+
+  Future<void> _backfillLegacyRefuelAmountColumns() async {
+    final rows = await customSelect(
+      '''
+      SELECT id, note, total_cost, machine_amount, paid_amount, discount_amount
+      FROM energy_record_rows
+      WHERE energy_type = ? AND note <> ''
+      ''',
+      variables: [Variable.withString(domain.EnergyType.fuel.name)],
+      readsFrom: {energyRecordRows},
+    ).get();
+
+    for (final row in rows) {
+      final parsed = LegacyRefuelNoteParser.parse(
+        row.read<String>('note'),
+        paidAmountFallback: row.read<double>('total_cost'),
+      );
+      if (!parsed.hasAny) {
+        continue;
+      }
+
+      final machineAmount = row.readNullable<double>('machine_amount');
+      final paidAmount = row.readNullable<double>('paid_amount');
+      final discountAmount = row.readNullable<double>('discount_amount');
+      final companion = EnergyRecordRowsCompanion(
+        machineAmount: machineAmount == null && parsed.machineAmount != null
+            ? Value(parsed.machineAmount)
+            : const Value.absent(),
+        paidAmount: paidAmount == null && parsed.paidAmount != null
+            ? Value(parsed.paidAmount)
+            : const Value.absent(),
+        discountAmount: discountAmount == null && parsed.discountAmount != null
+            ? Value(parsed.discountAmount)
+            : const Value.absent(),
+      );
+      if (!companion.machineAmount.present &&
+          !companion.paidAmount.present &&
+          !companion.discountAmount.present) {
+        continue;
+      }
+
+      await (update(energyRecordRows)
+            ..where((table) => table.id.equals(row.read<String>('id'))))
+          .write(companion);
+    }
   }
 }

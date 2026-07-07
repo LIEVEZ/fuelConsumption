@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fuel_consumption/src/application/record_commands.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
 import 'package:fuel_consumption/src/theme/app_colors.dart';
 import 'package:fuel_consumption/src/utils/energy_ui.dart';
 import 'package:fuel_consumption/src/widgets/section_header.dart';
-import 'package:uuid/uuid.dart';
 
 class MaintenanceScreen extends StatefulWidget {
   const MaintenanceScreen({
@@ -14,7 +14,7 @@ class MaintenanceScreen extends StatefulWidget {
   });
 
   final Vehicle vehicle;
-  final Future<void> Function(MaintenanceRecord record) onSave;
+  final Future<MaintenanceRecord> Function(MaintenanceRecordInput input) onSave;
   final VoidCallback onSaved;
 
   @override
@@ -128,7 +128,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
           children: [
             for (final category in MaintenanceCategory.values)
               ListTile(
-                leading: Icon(_categoryIcon(category)),
+                leading: Icon(maintenanceIcon(category)),
                 title: Text(category.label),
                 trailing: category == _category
                     ? Icon(
@@ -147,32 +147,29 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   }
 
   Future<void> _save() async {
-    final cost = double.tryParse(_costController.text);
-    if (cost == null || cost <= 0) {
-      setState(() => _error = '请填写有效保养费用');
-      return;
-    }
-
-    final record = MaintenanceRecord(
-      id: const Uuid().v4(),
-      vehicleId: widget.vehicle.id,
-      date: _date,
-      category: _category,
-      cost: cost,
-      shop: _shopController.text.trim(),
-      note: _noteController.text.trim(),
-    );
     setState(() {
       _saving = true;
       _error = null;
     });
     try {
-      await widget.onSave(record);
+      await widget.onSave(
+        MaintenanceRecordInput(
+          vehicleId: widget.vehicle.id,
+          date: _date,
+          category: _category,
+          costText: _costController.text,
+          shopText: _shopController.text,
+          noteText: _noteController.text,
+        ),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('已保存保养记录')));
       widget.onSaved();
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message);
     } on Object catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());
@@ -182,18 +179,6 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       }
     }
   }
-}
-
-IconData _categoryIcon(MaintenanceCategory category) {
-  return switch (category) {
-    MaintenanceCategory.regular => Icons.build_circle_outlined,
-    MaintenanceCategory.oil => Icons.oil_barrel_outlined,
-    MaintenanceCategory.tire => Icons.album_outlined,
-    MaintenanceCategory.repair => Icons.handyman_outlined,
-    MaintenanceCategory.wash => Icons.local_car_wash_outlined,
-    MaintenanceCategory.insurance => Icons.verified_user_outlined,
-    MaintenanceCategory.other => Icons.more_horiz,
-  };
 }
 
 class _ValueTile extends StatelessWidget {
