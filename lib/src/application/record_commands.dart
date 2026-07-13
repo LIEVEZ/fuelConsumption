@@ -107,7 +107,8 @@ class RecordCommandService {
   final AppRepository _repository;
   final String Function() _generateId;
 
-  Future<EnergyRecord> saveRefuel(RefuelRecordInput input) {
+  Future<EnergyRecord> saveRefuel(RefuelRecordInput input) async {
+    _ensureNotFuture(input.date);
     final assembly = RefuelRecordAssembler.assemble(
       RefuelRecordDraft(
         id: _generateId(),
@@ -126,10 +127,11 @@ class RecordCommandService {
         noteText: input.noteText,
       ),
     );
-    return _saveAssembledRecord(assembly);
+    return _saveEnergyRecord(_recordFromRefuelAssembly(assembly));
   }
 
-  Future<EnergyRecord> saveCharge(ChargeRecordInput input) {
+  Future<EnergyRecord> saveCharge(ChargeRecordInput input) async {
+    _ensureNotFuture(input.date);
     final assembly = EnergyRecordAssembler.assembleCharge(
       ChargeRecordDraft(
         id: _generateId(),
@@ -142,10 +144,11 @@ class RecordCommandService {
         noteText: input.noteText,
       ),
     );
-    return _saveAssembledRecord(assembly);
+    return _saveEnergyRecord(_recordFromEnergyAssembly(assembly));
   }
 
-  Future<EnergyRecord> saveHybrid(HybridRecordInput input) {
+  Future<EnergyRecord> saveHybrid(HybridRecordInput input) async {
+    _ensureNotFuture(input.date);
     final assembly = EnergyRecordAssembler.assembleHybrid(
       HybridRecordDraft(
         id: _generateId(),
@@ -159,12 +162,13 @@ class RecordCommandService {
         noteText: input.noteText,
       ),
     );
-    return _saveAssembledRecord(assembly);
+    return _saveEnergyRecord(_recordFromEnergyAssembly(assembly));
   }
 
   Future<MaintenanceRecord> saveMaintenance(
     MaintenanceRecordInput input,
   ) async {
+    _ensureNotFuture(input.date);
     final cost = double.tryParse(input.costText);
     if (cost == null || cost <= 0) {
       throw const FormatException('请填写有效保养费用');
@@ -187,14 +191,29 @@ class RecordCommandService {
     return record;
   }
 
-  Future<EnergyRecord> _saveAssembledRecord(Object assembly) async {
-    final record = switch (assembly) {
-      RefuelRecordAssemblyResult result when result.isSuccess => result.record!,
-      RefuelRecordAssemblyResult result => throw FormatException(result.error!),
-      EnergyRecordAssemblyResult result when result.isSuccess => result.record!,
-      EnergyRecordAssemblyResult result => throw FormatException(result.error!),
-      _ => throw ArgumentError.value(assembly, 'assembly'),
-    };
+  void _ensureNotFuture(DateTime date) {
+    if (date.isAfter(DateTime.now())) {
+      throw const FormatException('记录时间不能晚于当前时间');
+    }
+  }
+
+  EnergyRecord _recordFromRefuelAssembly(RefuelRecordAssemblyResult result) {
+    final record = result.record;
+    if (record != null) {
+      return record;
+    }
+    throw FormatException(result.error ?? '加油记录无效');
+  }
+
+  EnergyRecord _recordFromEnergyAssembly(EnergyRecordAssemblyResult result) {
+    final record = result.record;
+    if (record != null) {
+      return record;
+    }
+    throw FormatException(result.error ?? '补能记录无效');
+  }
+
+  Future<EnergyRecord> _saveEnergyRecord(EnergyRecord record) async {
     final previousRecords = await _repository.getRecords(record.vehicleId);
     final validation = RecordValidator().validate(record, previousRecords);
     if (!validation.isValid) {

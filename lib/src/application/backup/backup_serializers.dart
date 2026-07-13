@@ -13,15 +13,15 @@ Map<String, Object?> vehicleToJson(Vehicle vehicle) {
   };
 }
 
-Vehicle vehicleFromJson(Map<String, Object?> json) {
+Vehicle vehicleFromJson(Map<String, Object?> json, String path) {
   return Vehicle(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    type: VehicleType.fromName(json['type'] as String),
-    initialOdometerKm: (json['initialOdometerKm'] as num).toDouble(),
-    model: json['model'] as String? ?? '',
-    isDefault: json['isDefault'] as bool? ?? false,
-    archived: json['archived'] as bool? ?? false,
+    id: _requiredString(json, path, 'id'),
+    name: _requiredString(json, path, 'name'),
+    type: _enumValue(json, path, 'type', VehicleType.fromName),
+    initialOdometerKm: _requiredNumber(json, path, 'initialOdometerKm'),
+    model: _optionalString(json, path, 'model') ?? '',
+    isDefault: _optionalBool(json, path, 'isDefault') ?? false,
+    archived: _optionalBool(json, path, 'archived') ?? false,
   );
 }
 
@@ -37,15 +37,18 @@ Map<String, Object?> maintenanceRecordToJson(MaintenanceRecord record) {
   };
 }
 
-MaintenanceRecord maintenanceRecordFromJson(Map<String, Object?> json) {
+MaintenanceRecord maintenanceRecordFromJson(
+  Map<String, Object?> json,
+  String path,
+) {
   return MaintenanceRecord(
-    id: json['id'] as String,
-    vehicleId: json['vehicleId'] as String,
-    date: DateTime.parse(json['date'] as String),
-    category: MaintenanceCategory.fromName(json['category'] as String),
-    cost: (json['cost'] as num).toDouble(),
-    shop: json['shop'] as String? ?? '',
-    note: json['note'] as String? ?? '',
+    id: _requiredString(json, path, 'id'),
+    vehicleId: _requiredString(json, path, 'vehicleId'),
+    date: _requiredDateTime(json, path, 'date'),
+    category: _enumValue(json, path, 'category', _maintenanceCategoryFromName),
+    cost: _requiredNumber(json, path, 'cost'),
+    shop: _optionalString(json, path, 'shop') ?? '',
+    note: _optionalString(json, path, 'note') ?? '',
   );
 }
 
@@ -72,59 +75,156 @@ Map<String, Object?> energyRecordToJson(EnergyRecord record) {
   };
 }
 
-EnergyRecord energyRecordFromJson(Map<String, Object?> json) {
-  final type = EnergyType.fromName(json['energyType'] as String);
-  final note = json['note'] as String? ?? '';
+EnergyRecord energyRecordFromJson(Map<String, Object?> json, String path) {
+  final type = _enumValue(json, path, 'energyType', EnergyType.fromName);
+  final note = _optionalString(json, path, 'note') ?? '';
   final legacyRefuelAmounts = LegacyRefuelNoteParser.parse(
     note,
-    paidAmountFallback: (json['totalCost'] as num?)?.toDouble(),
+    paidAmountFallback: _optionalNumber(json, path, 'totalCost'),
   );
   return switch (type) {
     EnergyType.fuel => EnergyRecord.fuel(
-      id: json['id'] as String,
-      vehicleId: json['vehicleId'] as String,
-      date: DateTime.parse(json['date'] as String),
-      odometerKm: (json['odometerKm'] as num).toDouble(),
-      liters: (json['fuelLiters'] as num? ?? json['amount'] as num).toDouble(),
-      unitPrice: (json['fuelUnitPrice'] as num? ?? json['unitPrice'] as num)
-          .toDouble(),
-      isFull: json['isFull'] as bool? ?? false,
+      id: _requiredString(json, path, 'id'),
+      vehicleId: _requiredString(json, path, 'vehicleId'),
+      date: _requiredDateTime(json, path, 'date'),
+      odometerKm: _requiredNumber(json, path, 'odometerKm'),
+      liters:
+          _optionalNumber(json, path, 'fuelLiters') ??
+          _requiredNumber(json, path, 'amount'),
+      unitPrice:
+          _optionalNumber(json, path, 'fuelUnitPrice') ??
+          _requiredNumber(json, path, 'unitPrice'),
+      isFull: _optionalBool(json, path, 'isFull') ?? false,
       machineAmount:
-          (json['machineAmount'] as num?)?.toDouble() ??
+          _optionalNumber(json, path, 'machineAmount') ??
           legacyRefuelAmounts.machineAmount,
       paidAmount:
-          (json['paidAmount'] as num?)?.toDouble() ??
+          _optionalNumber(json, path, 'paidAmount') ??
           legacyRefuelAmounts.paidAmount,
       discountAmount:
-          (json['discountAmount'] as num?)?.toDouble() ??
+          _optionalNumber(json, path, 'discountAmount') ??
           legacyRefuelAmounts.discountAmount,
       note: note,
     ),
     EnergyType.charge => EnergyRecord.charge(
-      id: json['id'] as String,
-      vehicleId: json['vehicleId'] as String,
-      date: DateTime.parse(json['date'] as String),
-      odometerKm: (json['odometerKm'] as num).toDouble(),
-      kwh: (json['kwh'] as num? ?? json['amount'] as num).toDouble(),
+      id: _requiredString(json, path, 'id'),
+      vehicleId: _requiredString(json, path, 'vehicleId'),
+      date: _requiredDateTime(json, path, 'date'),
+      odometerKm: _requiredNumber(json, path, 'odometerKm'),
+      kwh:
+          _optionalNumber(json, path, 'kwh') ??
+          _requiredNumber(json, path, 'amount'),
       unitPrice:
-          (json['electricityUnitPrice'] as num? ?? json['unitPrice'] as num)
-              .toDouble(),
-      chargeMode: ChargeMode.fromName(
-        json['chargeMode'] as String? ?? ChargeMode.slow.name,
-      ),
+          _optionalNumber(json, path, 'electricityUnitPrice') ??
+          _requiredNumber(json, path, 'unitPrice'),
+      chargeMode:
+          _optionalEnumValue(json, path, 'chargeMode', ChargeMode.fromName) ??
+          ChargeMode.slow,
       note: note,
     ),
     EnergyType.hybrid => EnergyRecord.hybrid(
-      id: json['id'] as String,
-      vehicleId: json['vehicleId'] as String,
-      date: DateTime.parse(json['date'] as String),
-      odometerKm: (json['odometerKm'] as num).toDouble(),
-      liters: (json['fuelLiters'] as num? ?? 0).toDouble(),
-      fuelUnitPrice: (json['fuelUnitPrice'] as num? ?? 0).toDouble(),
-      kwh: (json['kwh'] as num? ?? 0).toDouble(),
-      electricityUnitPrice: (json['electricityUnitPrice'] as num? ?? 0)
-          .toDouble(),
+      id: _requiredString(json, path, 'id'),
+      vehicleId: _requiredString(json, path, 'vehicleId'),
+      date: _requiredDateTime(json, path, 'date'),
+      odometerKm: _requiredNumber(json, path, 'odometerKm'),
+      liters: _optionalNumber(json, path, 'fuelLiters') ?? 0,
+      fuelUnitPrice: _optionalNumber(json, path, 'fuelUnitPrice') ?? 0,
+      kwh: _optionalNumber(json, path, 'kwh') ?? 0,
+      electricityUnitPrice:
+          _optionalNumber(json, path, 'electricityUnitPrice') ?? 0,
       note: note,
     ),
   };
+}
+
+String _requiredString(Map<String, Object?> json, String path, String key) {
+  final value = json[key];
+  if (value is String) {
+    return value;
+  }
+  throw FormatException('$path.$key 必须是字符串');
+}
+
+String? _optionalString(Map<String, Object?> json, String path, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is String) {
+    return value;
+  }
+  throw FormatException('$path.$key 必须是字符串');
+}
+
+double _requiredNumber(Map<String, Object?> json, String path, String key) {
+  final value = json[key];
+  if (value is num) {
+    return value.toDouble();
+  }
+  throw FormatException('$path.$key 必须是数字');
+}
+
+double? _optionalNumber(Map<String, Object?> json, String path, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is num) {
+    return value.toDouble();
+  }
+  throw FormatException('$path.$key 必须是数字');
+}
+
+bool? _optionalBool(Map<String, Object?> json, String path, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is bool) {
+    return value;
+  }
+  throw FormatException('$path.$key 必须是布尔值');
+}
+
+DateTime _requiredDateTime(Map<String, Object?> json, String path, String key) {
+  final value = _requiredString(json, path, key);
+  final date = DateTime.tryParse(value);
+  if (date != null) {
+    return date;
+  }
+  throw FormatException('$path.$key 必须是有效日期字符串');
+}
+
+T _enumValue<T>(
+  Map<String, Object?> json,
+  String path,
+  String key,
+  T Function(String value) fromName,
+) {
+  final value = _requiredString(json, path, key);
+  return _parseEnumValue(path, key, value, fromName);
+}
+
+T? _optionalEnumValue<T>(
+  Map<String, Object?> json,
+  String path,
+  String key,
+  T Function(String value) fromName,
+) {
+  final value = _optionalString(json, path, key);
+  if (value == null) return null;
+  return _parseEnumValue(path, key, value, fromName);
+}
+
+T _parseEnumValue<T>(
+  String path,
+  String key,
+  String value,
+  T Function(String value) fromName,
+) {
+  try {
+    return fromName(value);
+  } on StateError {
+    throw FormatException('$path.$key 的值不支持: $value');
+  }
+}
+
+MaintenanceCategory _maintenanceCategoryFromName(String value) {
+  return MaintenanceCategory.values.firstWhere(
+    (category) => category.name == value,
+  );
 }

@@ -27,18 +27,21 @@ class EnergyRecordScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (vehicle.type) {
       VehicleType.electric => ChargeScreen(
+        key: ValueKey('charge-${vehicle.id}'),
         vehicle: vehicle,
         records: records,
         onSave: onSaveCharge,
         onSaved: onSaved,
       ),
       VehicleType.hybrid => HybridScreen(
+        key: ValueKey('hybrid-${vehicle.id}'),
         vehicle: vehicle,
         records: records,
         onSave: onSaveHybrid,
         onSaved: onSaved,
       ),
       VehicleType.fuel || VehicleType.motorcycle => RefuelScreen(
+        key: ValueKey('refuel-${vehicle.id}'),
         vehicle: vehicle,
         records: records,
         onSave: onSaveRefuel,

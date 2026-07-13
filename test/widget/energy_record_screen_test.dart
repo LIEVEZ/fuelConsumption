@@ -35,6 +35,52 @@ void main() {
     expect(find.text('加油量'), findsOneWidget);
     expect(find.text('充电电量'), findsOneWidget);
   });
+
+  testWidgets('resets form state when switching vehicles of the same type', (
+    tester,
+  ) async {
+    await _pumpEnergyScreenWithVehicle(
+      tester,
+      vehicle: const Vehicle(
+        id: 'vehicle-1',
+        name: '第一辆',
+        type: VehicleType.electric,
+        initialOdometerKm: 1000,
+      ),
+      records: [
+        EnergyRecord.charge(
+          id: 'record-1',
+          vehicleId: 'vehicle-1',
+          date: DateTime(2026),
+          odometerKm: 1500,
+          kwh: 10,
+          unitPrice: 0.5,
+          chargeMode: ChargeMode.slow,
+        ),
+      ],
+    );
+    await tester.enterText(find.byType(TextField).first, '9999');
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller?.text,
+      '9999',
+    );
+
+    await _pumpEnergyScreenWithVehicle(
+      tester,
+      vehicle: const Vehicle(
+        id: 'vehicle-2',
+        name: '第二辆',
+        type: VehicleType.electric,
+        initialOdometerKm: 2200,
+      ),
+      records: const [],
+    );
+
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller?.text,
+      '2200',
+    );
+  });
 }
 
 Future<void> _pumpEnergyScreen(
@@ -52,6 +98,27 @@ Future<void> _pumpEnergyScreen(
             initialOdometerKm: 1000,
           ),
           records: const [],
+          onSaveRefuel: (input) async => _dummyRefuelRecord(input),
+          onSaveCharge: (input) async => _dummyChargeRecord(input),
+          onSaveHybrid: (input) async => _dummyHybridRecord(input),
+          onSaved: () {},
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _pumpEnergyScreenWithVehicle(
+  WidgetTester tester, {
+  required Vehicle vehicle,
+  required List<EnergyRecord> records,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: EnergyRecordScreen(
+          vehicle: vehicle,
+          records: records,
           onSaveRefuel: (input) async => _dummyRefuelRecord(input),
           onSaveCharge: (input) async => _dummyChargeRecord(input),
           onSaveHybrid: (input) async => _dummyHybridRecord(input),

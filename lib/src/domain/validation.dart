@@ -40,6 +40,11 @@ class RecordValidator {
             .where((item) => item.vehicleId == record.vehicleId)
             .toList()
           ..sort((a, b) => a.date.compareTo(b.date));
+    if (sameVehicle.any(
+      (item) => item.id != record.id && item.date == record.date,
+    )) {
+      return const ValidationResult.invalid('同一时间已有补能记录');
+    }
     final earlier = sameVehicle
         .where((item) => item.date.isBefore(record.date))
         .toList();

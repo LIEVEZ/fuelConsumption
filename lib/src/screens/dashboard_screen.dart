@@ -128,6 +128,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         onSaved: _controller.goHome,
       ),
       DashboardPage.maintenance => MaintenanceScreen(
+        key: ValueKey('maintenance-${data.selectedVehicle.id}'),
         vehicle: data.selectedVehicle,
         onSave: commands.saveMaintenanceRecord,
         onSaved: _controller.goToExpense,

@@ -193,6 +193,106 @@ void main() {
     );
   });
 
+  test('decode reports invalid exportedAt format', () {
+    expect(
+      () => BackupCodec().decode('''
+{
+  "schemaVersion": 1,
+  "exportedAt": "not-a-date",
+  "vehicles": [],
+  "records": []
+}
+'''),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('exportedAt 必须是有效日期字符串'),
+        ),
+      ),
+    );
+  });
+
+  test('decode reports root list field type errors', () {
+    expect(
+      () => BackupCodec().decode('''
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-07-05T09:30:00.000Z",
+  "vehicles": {},
+  "records": []
+}
+'''),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('字段 vehicles 必须是数组'),
+        ),
+      ),
+    );
+  });
+
+  test('decode reports nested record field path', () {
+    expect(
+      () => BackupCodec().decode('''
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-07-05T09:30:00.000Z",
+  "vehicles": [],
+  "records": [
+    {
+      "id": "record-1",
+      "vehicleId": "vehicle-1",
+      "date": "2026-07-05T00:00:00.000Z",
+      "odometerKm": "12100",
+      "energyType": "fuel",
+      "amount": 20,
+      "unitPrice": 7,
+      "isFull": true
+    }
+  ]
+}
+'''),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('records[0].odometerKm 必须是数字'),
+        ),
+      ),
+    );
+  });
+
+  test('decode reports unsupported maintenance category path', () {
+    expect(
+      () => BackupCodec().decode('''
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-07-05T09:30:00.000Z",
+  "vehicles": [],
+  "records": [],
+  "maintenanceRecords": [
+    {
+      "id": "maintenance-1",
+      "vehicleId": "vehicle-1",
+      "date": "2026-07-06T00:00:00.000Z",
+      "category": "unknown",
+      "cost": 200
+    }
+  ]
+}
+'''),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('maintenanceRecords[0].category 的值不支持: unknown'),
+        ),
+      ),
+    );
+  });
+
   test('decode requires object root', () {
     expect(
       () => BackupCodec().decode('[]'),

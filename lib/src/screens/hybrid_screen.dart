@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuel_consumption/src/application/record_commands.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
-import 'package:fuel_consumption/src/theme/app_colors.dart';
+import 'package:fuel_consumption/src/screens/record_form_support.dart';
 import 'package:fuel_consumption/src/utils/energy_ui.dart';
 import 'package:fuel_consumption/src/widgets/refuel/refuel_form_widgets.dart';
 import 'package:fuel_consumption/src/widgets/section_header.dart';
@@ -24,7 +24,8 @@ class HybridScreen extends StatefulWidget {
   State<HybridScreen> createState() => _HybridScreenState();
 }
 
-class _HybridScreenState extends State<HybridScreen> {
+class _HybridScreenState extends State<HybridScreen>
+    with RecordFormSubmitState<HybridScreen> {
   final _odometerController = TextEditingController();
   final _litersController = TextEditingController(text: '0.00');
   final _fuelUnitPriceController = TextEditingController(text: '0.00');
@@ -32,8 +33,6 @@ class _HybridScreenState extends State<HybridScreen> {
   final _electricityUnitPriceController = TextEditingController(text: '0.00');
   final _noteController = TextEditingController();
   DateTime _date = DateTime.now();
-  bool _saving = false;
-  String? _error;
 
   @override
   void initState() {
@@ -127,109 +126,46 @@ class _HybridScreenState extends State<HybridScreen> {
             ),
           ],
         ),
-        if (_error != null) ...[
+        if (errorText != null) ...[
           const SizedBox(height: 12),
-          Text(
-            _error!,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
+          RecordFormErrorText(error: errorText!),
         ],
         const SizedBox(height: 24),
-        SizedBox(
-          height: 56,
-          child: FilledButton(
-            onPressed: _saving ? null : _save,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.sky,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(32),
-              ),
-            ),
-            child: _saving
-                ? const SizedBox.square(
-                    dimension: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.4),
-                  )
-                : const Text(
-                    '保存',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-          ),
-        ),
+        RecordSaveButton(saving: saving, onPressed: _save),
       ],
     );
   }
 
   Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      initialDate: _date,
-    );
+    final picked = await pickRecordDate(context: context, current: _date);
     if (picked == null || !mounted) return;
-    setState(() {
-      _date = DateTime(
-        picked.year,
-        picked.month,
-        picked.day,
-        _date.hour,
-        _date.minute,
-      );
-    });
+    setState(() => _date = picked);
   }
 
   Future<void> _pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_date),
-    );
+    final picked = await pickRecordTime(context: context, current: _date);
     if (picked == null || !mounted) return;
-    setState(() {
-      _date = DateTime(
-        _date.year,
-        _date.month,
-        _date.day,
-        picked.hour,
-        picked.minute,
-      );
-    });
+    setState(() => _date = picked);
   }
 
   Future<void> _save() async {
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-    try {
-      await widget.onSave(
-        HybridRecordInput(
-          vehicleId: widget.vehicle.id,
-          date: _date,
-          odometerText: _odometerController.text,
-          litersText: _litersController.text,
-          fuelUnitPriceText: _fuelUnitPriceController.text,
-          kwhText: _kwhController.text,
-          electricityUnitPriceText: _electricityUnitPriceController.text,
-          noteText: _noteController.text,
-        ),
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已保存油电补能记录')));
-      widget.onSaved();
-    } on FormatException catch (error) {
-      if (!mounted) return;
-      setState(() => _error = error.message);
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() => _error = error.toString());
-    } finally {
-      if (mounted) {
-        setState(() => _saving = false);
-      }
-    }
+    return submitRecord(
+      save: () async {
+        await widget.onSave(
+          HybridRecordInput(
+            vehicleId: widget.vehicle.id,
+            date: _date,
+            odometerText: _odometerController.text,
+            litersText: _litersController.text,
+            fuelUnitPriceText: _fuelUnitPriceController.text,
+            kwhText: _kwhController.text,
+            electricityUnitPriceText: _electricityUnitPriceController.text,
+            noteText: _noteController.text,
+          ),
+        );
+      },
+      successMessage: '已保存油电补能记录',
+      onSaved: widget.onSaved,
+    );
   }
 }

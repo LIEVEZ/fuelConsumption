@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuel_consumption/src/application/record_commands.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
-import 'package:fuel_consumption/src/theme/app_colors.dart';
+import 'package:fuel_consumption/src/screens/record_form_support.dart';
 import 'package:fuel_consumption/src/utils/energy_ui.dart';
 import 'package:fuel_consumption/src/widgets/section_header.dart';
 
@@ -21,14 +21,13 @@ class MaintenanceScreen extends StatefulWidget {
   State<MaintenanceScreen> createState() => _MaintenanceScreenState();
 }
 
-class _MaintenanceScreenState extends State<MaintenanceScreen> {
+class _MaintenanceScreenState extends State<MaintenanceScreen>
+    with RecordFormSubmitState<MaintenanceScreen> {
   final _costController = TextEditingController();
   final _shopController = TextEditingController();
   final _noteController = TextEditingController();
-  DateTime _date = DateTime.now();
+  DateTime _date = DateUtils.dateOnly(DateTime.now());
   MaintenanceCategory _category = MaintenanceCategory.regular;
-  bool _saving = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -72,46 +71,21 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             ],
           ),
         ),
-        if (_error != null) ...[
+        if (errorText != null) ...[
           const SizedBox(height: 12),
-          Text(
-            _error!,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
+          RecordFormErrorText(error: errorText!),
         ],
         const SizedBox(height: 24),
-        SizedBox(
-          height: 56,
-          child: FilledButton(
-            onPressed: _saving ? null : _save,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.sky,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(32),
-              ),
-            ),
-            child: _saving
-                ? const SizedBox.square(
-                    dimension: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.4),
-                  )
-                : const Text(
-                    '保存',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-          ),
-        ),
+        RecordSaveButton(saving: saving, onPressed: _save),
       ],
     );
   }
 
   Future<void> _pickDate() async {
-    final picked = await showDatePicker(
+    final picked = await pickRecordDate(
       context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      initialDate: _date,
+      current: _date,
+      keepTime: false,
     );
     if (picked == null || !mounted) return;
     setState(() => _date = picked);
@@ -147,37 +121,22 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   }
 
   Future<void> _save() async {
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-    try {
-      await widget.onSave(
-        MaintenanceRecordInput(
-          vehicleId: widget.vehicle.id,
-          date: _date,
-          category: _category,
-          costText: _costController.text,
-          shopText: _shopController.text,
-          noteText: _noteController.text,
-        ),
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已保存保养记录')));
-      widget.onSaved();
-    } on FormatException catch (error) {
-      if (!mounted) return;
-      setState(() => _error = error.message);
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() => _error = error.toString());
-    } finally {
-      if (mounted) {
-        setState(() => _saving = false);
-      }
-    }
+    return submitRecord(
+      save: () async {
+        await widget.onSave(
+          MaintenanceRecordInput(
+            vehicleId: widget.vehicle.id,
+            date: _date,
+            category: _category,
+            costText: _costController.text,
+            shopText: _shopController.text,
+            noteText: _noteController.text,
+          ),
+        );
+      },
+      successMessage: '已保存保养记录',
+      onSaved: widget.onSaved,
+    );
   }
 }
 

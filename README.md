@@ -87,7 +87,7 @@ flutter analyze
 flutter test --concurrency 1
 ```
 
-当前测试覆盖 32 个测试文件、106 个用例：
+当前测试覆盖 32 个测试文件、113 个用例：
 
 - 架构边界：锁定 domain/application 无 Flutter/Riverpod/data 反向依赖、UI 层不直连 data、widgets 不依赖 screens，并防止 data mapper 复用备份 JSON serializer。
 - 领域统计：燃油、电车、插混、少量记录、月度/年度趋势和费用概览。

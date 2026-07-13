@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuel_consumption/src/application/record_commands.dart';
@@ -81,6 +83,53 @@ void main() {
 
     expect(find.text('请填写有效充电电量'), findsOneWidget);
     expect(saveCalled, isTrue);
+  });
+
+  testWidgets('ignores duplicate taps while saving', (tester) async {
+    final saveCompleter = Completer<EnergyRecord>();
+    var saveCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ChargeScreen(
+            vehicle: _vehicle(),
+            records: [_record(odometerKm: 12000)],
+            onSave: (input) {
+              saveCalls += 1;
+              return saveCompleter.future;
+            },
+            onSaved: () {},
+          ),
+        ),
+      ),
+    );
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), '12180');
+    await tester.enterText(fields.at(1), '42');
+    await tester.enterText(fields.at(2), '0.68');
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('保存'));
+    await tester.tap(find.text('保存'));
+    await tester.pump();
+
+    expect(saveCalls, 1);
+
+    saveCompleter.complete(
+      EnergyRecord.charge(
+        id: 'saved-record',
+        vehicleId: 'vehicle-1',
+        date: DateTime(2026),
+        odometerKm: 12180,
+        kwh: 42,
+        unitPrice: 0.68,
+        chargeMode: ChargeMode.slow,
+      ),
+    );
+    await tester.pumpAndSettle();
   });
 }
 

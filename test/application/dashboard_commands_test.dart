@@ -123,6 +123,18 @@ void main() {
         ),
       ),
     );
+    await expectLater(
+      commands.saveChargeRecord(
+        _chargeInput(date: DateTime.now().add(const Duration(days: 1))),
+      ),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          '记录时间不能晚于当前时间',
+        ),
+      ),
+    );
     expect(repository.savedRecords, isEmpty);
     expect(repository.savedMaintenanceRecords, isEmpty);
   });
@@ -282,10 +294,10 @@ RefuelRecordInput _refuelInput({DateTime? date, String odometerText = '1100'}) {
   );
 }
 
-ChargeRecordInput _chargeInput({String kwhText = '42'}) {
+ChargeRecordInput _chargeInput({String kwhText = '42', DateTime? date}) {
   return ChargeRecordInput(
     vehicleId: 'vehicle-1',
-    date: DateTime(2026, 7, 2),
+    date: date ?? DateTime(2026, 7, 2),
     odometerText: '1200',
     kwhText: kwhText,
     unitPriceText: '0.68',

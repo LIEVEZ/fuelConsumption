@@ -32,25 +32,27 @@ class BackupCodec {
         throw const FormatException('JSON 根节点必须是对象');
       }
       final schemaVersion =
-          decoded['schemaVersion'] as int? ?? currentSchemaVersion;
+          _optionalInt(decoded, 'schemaVersion') ?? currentSchemaVersion;
       if (schemaVersion != currentSchemaVersion) {
         throw FormatException('不支持的备份版本: $schemaVersion');
       }
+      final exportedAt = _requiredDateTime(decoded, 'exportedAt');
+      final vehicles = _requiredObjectList(decoded, 'vehicles');
+      final records = _requiredObjectList(decoded, 'records');
+      final maintenanceRecords = _optionalObjectList(
+        decoded,
+        'maintenanceRecords',
+      );
       return BackupData(
         schemaVersion: schemaVersion,
-        exportedAt: DateTime.parse(_requiredString(decoded, 'exportedAt')),
-        vehicles: _requiredObjectList(
-          decoded,
-          'vehicles',
-        ).map(vehicleFromJson).toList(),
-        records: _requiredObjectList(
-          decoded,
-          'records',
-        ).map(energyRecordFromJson).toList(),
-        maintenanceRecords: _optionalObjectList(
-          decoded,
+        exportedAt: exportedAt,
+        vehicles: _decodeObjects(vehicles, 'vehicles', vehicleFromJson),
+        records: _decodeObjects(records, 'records', energyRecordFromJson),
+        maintenanceRecords: _decodeObjects(
+          maintenanceRecords,
           'maintenanceRecords',
-        ).map(maintenanceRecordFromJson).toList(),
+          maintenanceRecordFromJson,
+        ),
       );
     } on FormatException {
       rethrow;
@@ -67,13 +69,32 @@ class BackupCodec {
     throw FormatException('备份缺少字段: $key');
   }
 
+  DateTime _requiredDateTime(Map<String, Object?> json, String key) {
+    final value = _requiredString(json, key);
+    final date = DateTime.tryParse(value);
+    if (date != null) {
+      return date;
+    }
+    throw FormatException('$key 必须是有效日期字符串');
+  }
+
+  int? _optionalInt(Map<String, Object?> json, String key) {
+    final value = json[key];
+    if (value == null) return null;
+    if (value is int) return value;
+    throw FormatException('字段 $key 必须是整数');
+  }
+
   List<Map<String, Object?>> _requiredObjectList(
     Map<String, Object?> json,
     String key,
   ) {
     final value = json[key];
-    if (value is! List<Object?>) {
+    if (value == null) {
       throw FormatException('备份缺少字段: $key');
+    }
+    if (value is! List<Object?>) {
+      throw FormatException('字段 $key 必须是数组');
     }
     return _castObjectList(value, key);
   }
@@ -99,6 +120,17 @@ class BackupCodec {
           item
         else
           throw FormatException('字段 $key 中包含非对象项'),
+    ];
+  }
+
+  List<T> _decodeObjects<T>(
+    List<Map<String, Object?>> source,
+    String key,
+    T Function(Map<String, Object?> json, String path) decode,
+  ) {
+    return [
+      for (var index = 0; index < source.length; index++)
+        decode(source[index], '$key[$index]'),
     ];
   }
 }

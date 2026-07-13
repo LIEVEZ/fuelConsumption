@@ -113,6 +113,32 @@ void main() {
       expect(result.isValid, isFalse);
       expect(result.message, '里程必须大于上一条记录');
     });
+
+    test('rejects duplicate record timestamps for the same vehicle', () {
+      final previous = EnergyRecord.fuel(
+        id: 'record-1',
+        vehicleId: 'vehicle-1',
+        date: DateTime(2026),
+        odometerKm: 100,
+        liters: 10,
+        unitPrice: 7.25,
+        isFull: true,
+      );
+      final record = EnergyRecord.charge(
+        id: 'record-2',
+        vehicleId: 'vehicle-1',
+        date: DateTime(2026),
+        odometerKm: 110,
+        kwh: 20,
+        unitPrice: 0.6,
+        chargeMode: ChargeMode.fast,
+      );
+
+      final result = RecordValidator().validate(record, [previous]);
+
+      expect(result.isValid, isFalse);
+      expect(result.message, '同一时间已有补能记录');
+    });
   });
 
   group('MaintenanceRecordValidator', () {

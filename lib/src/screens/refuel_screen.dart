@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fuel_consumption/src/application/record_commands.dart';
 import 'package:fuel_consumption/src/domain/fuel_grades.dart';
 import 'package:fuel_consumption/src/domain/models.dart';
+import 'package:fuel_consumption/src/screens/record_form_support.dart';
 import 'package:fuel_consumption/src/screens/refuel_form_controller.dart';
-import 'package:fuel_consumption/src/theme/app_colors.dart';
 import 'package:fuel_consumption/src/utils/energy_ui.dart';
 import 'package:fuel_consumption/src/widgets/refuel/refuel_form_widgets.dart';
 
@@ -25,14 +25,13 @@ class RefuelScreen extends StatefulWidget {
   State<RefuelScreen> createState() => _RefuelScreenState();
 }
 
-class _RefuelScreenState extends State<RefuelScreen> {
+class _RefuelScreenState extends State<RefuelScreen>
+    with RecordFormSubmitState<RefuelScreen> {
   late final RefuelFormController _form;
   DateTime _date = DateTime.now();
   bool _isFull = true;
   bool _warningLightOn = false;
-  bool _saving = false;
   String _fuelGrade = defaultFuelGrade;
-  String? _error;
 
   @override
   void initState() {
@@ -168,39 +167,17 @@ class _RefuelScreenState extends State<RefuelScreen> {
         const SizedBox(height: 18),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 42),
-          child: SizedBox(
+          child: RecordSaveButton(
+            saving: saving,
+            onPressed: _save,
             height: 58,
-            child: FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.sky,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(32),
-                ),
-              ),
-              child: _saving
-                  ? const SizedBox.square(
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.4),
-                    )
-                  : const Text(
-                      '保存',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-            ),
+            fontSize: 20,
           ),
         ),
-        if (_error != null)
-          Padding(
+        if (errorText != null)
+          RecordFormErrorText(
+            error: errorText!,
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
-            child: Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
           ),
         const SizedBox(height: 28),
         Padding(
@@ -215,39 +192,15 @@ class _RefuelScreenState extends State<RefuelScreen> {
   }
 
   Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      initialDate: _date,
-    );
+    final picked = await pickRecordDate(context: context, current: _date);
     if (picked == null || !mounted) return;
-    setState(() {
-      _date = DateTime(
-        picked.year,
-        picked.month,
-        picked.day,
-        _date.hour,
-        _date.minute,
-      );
-    });
+    setState(() => _date = picked);
   }
 
   Future<void> _pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_date),
-    );
+    final picked = await pickRecordTime(context: context, current: _date);
     if (picked == null || !mounted) return;
-    setState(() {
-      _date = DateTime(
-        _date.year,
-        _date.month,
-        _date.day,
-        picked.hour,
-        picked.minute,
-      );
-    });
+    setState(() => _date = picked);
   }
 
   Future<void> _pickFuelGrade() async {
@@ -279,43 +232,28 @@ class _RefuelScreenState extends State<RefuelScreen> {
   }
 
   Future<void> _save() async {
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-    try {
-      await widget.onSave(
-        RefuelRecordInput(
-          vehicleId: widget.vehicle.id,
-          date: _date,
-          odometerText: _form.odometerController.text,
-          unitPriceText: _form.unitPriceController.text,
-          litersText: _form.litersController.text,
-          machineAmountText: _form.machineAmountController.text,
-          paidUnitPriceText: _form.paidUnitPriceController.text,
-          discountText: _form.discountController.text,
-          paidAmountText: _form.paidAmountController.text,
-          isFull: _isFull,
-          warningLightOn: _warningLightOn,
-          fuelGrade: _fuelGrade,
-          noteText: _form.noteController.text,
-        ),
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已保存加油记录')));
-      widget.onSaved();
-    } on FormatException catch (error) {
-      if (!mounted) return;
-      setState(() => _error = error.message);
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() => _error = error.toString());
-    } finally {
-      if (mounted) {
-        setState(() => _saving = false);
-      }
-    }
+    return submitRecord(
+      save: () async {
+        await widget.onSave(
+          RefuelRecordInput(
+            vehicleId: widget.vehicle.id,
+            date: _date,
+            odometerText: _form.odometerController.text,
+            unitPriceText: _form.unitPriceController.text,
+            litersText: _form.litersController.text,
+            machineAmountText: _form.machineAmountController.text,
+            paidUnitPriceText: _form.paidUnitPriceController.text,
+            discountText: _form.discountController.text,
+            paidAmountText: _form.paidAmountController.text,
+            isFull: _isFull,
+            warningLightOn: _warningLightOn,
+            fuelGrade: _fuelGrade,
+            noteText: _form.noteController.text,
+          ),
+        );
+      },
+      successMessage: '已保存加油记录',
+      onSaved: widget.onSaved,
+    );
   }
 }
